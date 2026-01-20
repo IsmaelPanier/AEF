@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Régie Virtuelle - ProPresenter v3.0</title>
+    <title>Régie Virtuelle - ProPresenter v3.1</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700;800&display=swap');
 
@@ -302,9 +302,9 @@
 
         /* ==================== AFFICHAGE VERSET/MESSAGE (LOWER THIRD) ==================== */
         .lt-wrapper {
-            width: 1400px;              /* ← LARGEUR FIXE 1400px */
-            max-width: 90%;             /* Responsive sur petit écran */
-            min-height: 120px;          /* Hauteur minimale */
+            width: 1400px;
+            max-width: 90%;
+            min-height: 120px;
             margin-bottom: 0;
             position: relative;
             opacity: 0;
@@ -319,7 +319,6 @@
             display: block;
         }
 
-        /* Badge supérieur (Référence biblique ou "MESSAGE") */
         .church-badge {
             background: white;
             color: #333;
@@ -338,16 +337,15 @@
             transition: opacity 0.3s ease;
         }
 
-        /* Bloc principal - couleur variable */
         .main-card {
             background-color: var(--couleur-principale);
             padding: 35px 60px 35px 100px;
             position: relative;
             box-shadow: 0 20px 40px rgba(0,0,0,0.2);
             color: white;
-            min-height: 100px;          /* Hauteur minimale */
+            min-height: 100px;
             display: flex;
-            align-items: center;        /* Centrer verticalement */
+            align-items: center;
         }
 
         .main-card::before {
@@ -372,7 +370,6 @@
             z-index: -1;
         }
 
-        /* Animation du contenu */
         .content-anim {
             transition: opacity 0.6s ease, transform 0.6s ease;
             width: 100%;
@@ -384,7 +381,7 @@
         }
 
         .verse-text {
-            font-size: 1.35rem;         /* Légèrement réduit pour 1400px */
+            font-size: 1.35rem;
             font-weight: 700;
             line-height: 1.4;
             text-transform: uppercase;
@@ -453,7 +450,6 @@
             animation: pulse 1s infinite;
         }
 
-        /* Masquer après 3 secondes si connecté */
         .status-indicator.auto-hide {
             opacity: 0;
             pointer-events: none;
@@ -668,15 +664,12 @@
         const statusIndicator = document.getElementById("statusIndicator");
         
         let lastText = "";
-        let reconnectTimeout = null;
-        let useFallback = false;
-        let currentReader = null;
         let pollInterval = null;
         let currentMode = null;
         let titreActive = false;
         let isHidden = false;
         let statusHideTimeout = null;
-        let isConnected = false;  // ← FIX : Variable pour tracker connexion
+        let isConnected = false;
 
         // ==================== ANIMATION APRÈS INACTIVITÉ ====================
         const INACTIVITY_THRESHOLD = 20000; // 20 secondes
@@ -775,18 +768,15 @@
         });
 
         function reconnect() {
-            if (reconnectTimeout) clearTimeout(reconnectTimeout);
             if (pollInterval) clearInterval(pollInterval);
-            if (currentReader) { try { currentReader.cancel(); } catch(e) {} }
             API_BASE = apiUrlInput.value.trim();
             if (!API_BASE.startsWith('http')) {
                 setStatus('error', '⚠️ Erreur URL');
                 return;
             }
             localStorage.setItem('propresenter_api', API_BASE);
-            useFallback = false;
             lastText = "";
-            connectStream();
+            startPolling();
         }
 
         // ==================== AFFICHAGE AVEC ANIMATION INTELLIGENTE ====================
@@ -849,7 +839,6 @@
         }
 
         function setStatus(status, text) {
-            // ← FIX : Mettre à jour isConnected
             isConnected = (status === 'connected');
             
             if (!isSourceMode) {
@@ -867,75 +856,47 @@
             }
         }
 
-        // ==================== CONNEXION SSE ====================
-        async function connectStream() {
-            if (useFallback) return;
-            setStatus('connecting', 'Connexion...');
-            try {
-                const response = await fetch(`${API_BASE}/v1/status/updates`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ "status_updates": [{"url": "/v1/status/slide"}] })
-                });
-                if (!response.ok) { throw new Error(`HTTP ${response.status}`); }
-                setStatus('connected', '✓ Stream');
-                console.log('[ProPresenter] ✅ Connecté en SSE');
-                
-                currentReader = response.body.getReader();
-                const decoder = new TextDecoder();
-                let buffer = '';
-                
-                while (true) {
-                    const { done, value } = await currentReader.read();
-                    if (done) {
-                        console.log('[ProPresenter] Stream terminé, reconnexion immédiate...');
-                        setStatus('connecting', '🔄 Reconnexion...');
-                        setTimeout(connectStream, 500);
-                        break;
-                    }
-                    buffer += decoder.decode(value, { stream: true });
-                    const lines = buffer.split('\n');
-                    buffer = lines.pop() || '';
-                    for (const line of lines) {
-                        if (line.startsWith('data: ')) {
-                            try {
-                                const jsonData = line.substring(6);
-                                const data = JSON.parse(jsonData);
-                                const currentText = data.current?.text || data.text || "";
-                                updateDisplay(currentText);
-                            } catch (e) { console.error('[ProPresenter] Erreur parsing JSON:', e); }
-                        }
-                    }
-                }
-            } catch (error) {
-                console.error('[ProPresenter] ❌ Erreur de connexion:', error);
-                setStatus('connecting', '⚠️ Erreur');
-            }
-            reconnectTimeout = setTimeout(connectStream, 1000);
-        }
-
+        // ==================== POLLING UNIQUEMENT (PAS DE SSE) ====================
         async function pollUpdate() {
-            if (!useFallback) return;
             try {
                 const response = await fetch(`${API_BASE}/v1/status/slide`);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+                
                 const data = await response.json();
                 const currentText = data.current?.text || "";
+                
+                // Mettre à jour le statut à la première réussite
+                if (!isConnected) {
+                    console.log('[ProPresenter] ✅ Connecté en Polling');
+                    setStatus('connected', '✓ Polling');
+                }
+                
                 updateDisplay(currentText);
-                setStatus('connected', '✓ Poll');
+                
             } catch (err) {
+                console.error('[ProPresenter] ❌ Erreur polling:', err);
                 setStatus('connecting', '⚠️ Erreur');
+                isConnected = false;
             }
         }
 
-        // ← FIX : Utiliser isConnected au lieu de statusEl.textContent
-        setTimeout(() => {
-            if (!isConnected) {
-                console.warn('[ProPresenter] Mode polling activé après 5 secondes');
-                useFallback = true;
-                if (reconnectTimeout) clearTimeout(reconnectTimeout);
-                pollInterval = setInterval(pollUpdate, 500);
-            }
-        }, 5000);
+        function startPolling() {
+            console.log('[ProPresenter] 🔄 Démarrage polling (500ms)');
+            
+            // Arrêter l'ancien interval si existe
+            if (pollInterval) clearInterval(pollInterval);
+            
+            // Premier poll immédiat
+            pollUpdate();
+            
+            // Puis toutes les 500ms
+            pollInterval = setInterval(pollUpdate, 500);
+            
+            setStatus('connecting', 'Connexion...');
+        }
 
         // ==================== SYNCHRONISATION TEMPS RÉEL ====================
         window.addEventListener('storage', (e) => {
@@ -1057,7 +1018,7 @@
 
         window.addEventListener('DOMContentLoaded', () => {
             chargerPreferences();
-            connectStream();
+            startPolling();
         });
 
         // ==================== RACCOURCIS CLAVIER ====================
