@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Régie Chants - ProPresenter</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&display=swap');
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: transparent;
+            font-family: 'Montserrat', sans-serif;
+            height: 100vh;
+            width: 100vw;
+            overflow: hidden;
+            display: flex;
+            justify-content: center; /* Centré horizontalement */
+            align-items: flex-end;   /* En bas */
+            padding-bottom: 50px;    /* Légère marge du bas */
+        }
+
+        #chant-text {
+            color: white;
+            font-size: 30px;
+            font-weight: 700;
+            text-align: center;
+            max-width: 90%;
+            line-height: 1.3;
+            font-family: 'Montserrat', sans-serif;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+            padding: 20px 40px;
+            transition: opacity 0.3s ease;
+            opacity: 0;
+        }
+
+        #chant-text.visible {
+            opacity: 1;
+        }
+    </style>
+</head>
+<body>
+    <div id="chant-text"></div>
+
+    <script>
+        // ==================== CONFIGURATION ====================
+        const API_BASE = "http://192.168.1.22:49196";
+        
+        // ==================== DÉTECTION DES VERSETS ====================
+        const LIVRES_BIBLE = [
+            {fr:"Genèse",en:"Genesis",abrev:["Gen","Gn","Ge"]},
+            {fr:"Exode",en:"Exodus",abrev:["Exo","Ex","Exod"]},
+            {fr:"Lévitique",en:"Leviticus",abrev:["Lév","Lv","Lev"]},
+            {fr:"Nombres",en:"Numbers",abrev:["Nom","Nb","Num"]},
+            {fr:"Deutéronome",en:"Deuteronomy",abrev:["Deut","Dt","Deu"]},
+            {fr:"Josué",en:"Joshua",abrev:["Jos","Josh"]},
+            {fr:"Juges",en:"Judges",abrev:["Jug","Jg","Judg"]},
+            {fr:"Ruth",en:"Ruth",abrev:["Rt","Ru"]},
+            {fr:"1 Samuel",en:"1 Samuel",abrev:["1 Sam","1 S","1Sam","1S"]},
+            {fr:"2 Samuel",en:"2 Samuel",abrev:["2 Sam","2 S","2Sam","2S"]},
+            {fr:"1 Rois",en:"1 Kings",abrev:["1 Ro","1 R","1Ro","1R","1 Ki"]},
+            {fr:"2 Rois",en:"2 Kings",abrev:["2 Ro","2 R","2Ro","2R","2 Ki"]},
+            {fr:"1 Chroniques",en:"1 Chronicles",abrev:["1 Chr","1 Ch","1Chr","1Ch"]},
+            {fr:"2 Chroniques",en:"2 Chronicles",abrev:["2 Chr","2 Ch","2Chr","2Ch"]},
+            {fr:"Esdras",en:"Ezra",abrev:["Esd","Ezr"]},
+            {fr:"Néhémie",en:"Nehemiah",abrev:["Néh","Neh","Ne"]},
+            {fr:"Esther",en:"Esther",abrev:["Est","Esth","Es"]},
+            {fr:"Job",en:"Job",abrev:["Jb"]},
+            {fr:"Psaumes",en:"Psalms",abrev:["Ps","Psa","Psaume"]},
+            {fr:"Proverbes",en:"Proverbs",abrev:["Prov","Pr","Pro"]},
+            {fr:"Ecclésiaste",en:"Ecclesiastes",abrev:["Ecc","Ec","Eccl"]},
+            {fr:"Cantique des Cantiques",en:"Song of Solomon",abrev:["Cant","Ct","Song","SOS"]},
+            {fr:"Ésaïe",en:"Isaiah",abrev:["Ésa","És","Isa","Is"]},
+            {fr:"Jérémie",en:"Jeremiah",abrev:["Jér","Jr","Jer"]},
+            {fr:"Lamentations",en:"Lamentations",abrev:["Lam","La"]},
+            {fr:"Ézéchiel",en:"Ezekiel",abrev:["Ézé","Éz","Eze","Ezek"]},
+            {fr:"Daniel",en:"Daniel",abrev:["Dan","Da","Dn"]},
+            {fr:"Osée",en:"Hosea",abrev:["Os","Hos"]},
+            {fr:"Joël",en:"Joel",abrev:["Joe","Jl"]},
+            {fr:"Amos",en:"Amos",abrev:["Am"]},
+            {fr:"Abdias",en:"Obadiah",abrev:["Abd","Ob","Oba"]},
+            {fr:"Jonas",en:"Jonah",abrev:["Jon","Jnh"]},
+            {fr:"Michée",en:"Micah",abrev:["Mic","Mi"]},
+            {fr:"Nahum",en:"Nahum",abrev:["Nah","Na"]},
+            {fr:"Habakuk",en:"Habakkuk",abrev:["Hab","Ha"]},
+            {fr:"Sophonie",en:"Zephaniah",abrev:["Soph","So","Zep"]},
+            {fr:"Aggée",en:"Haggai",abrev:["Agg","Ag","Hag"]},
+            {fr:"Zacharie",en:"Zechariah",abrev:["Zach","Za","Zec"]},
+            {fr:"Malachie",en:"Malachi",abrev:["Mal","Ml"]},
+            {fr:"Matthieu",en:"Matthew",abrev:["Matt","Mt","Mat"]},
+            {fr:"Marc",en:"Mark",abrev:["Mc","Mr","Mar"]},
+            {fr:"Luc",en:"Luke",abrev:["Lc","Lk","Lu"]},
+            {fr:"Jean",en:"John",abrev:["Jn","Joh"]},
+            {fr:"Actes",en:"Acts",abrev:["Act","Ac"]},
+            {fr:"Romains",en:"Romans",abrev:["Rom","Ro","Rm"]},
+            {fr:"1 Corinthiens",en:"1 Corinthians",abrev:["1 Cor","1 Co","1Cor","1Co"]},
+            {fr:"2 Corinthiens",en:"2 Corinthians",abrev:["2 Cor","2 Co","2Cor","2Co"]},
+            {fr:"Galates",en:"Galatians",abrev:["Gal","Ga"]},
+            {fr:"Éphésiens",en:"Ephesians",abrev:["Éph","Ép","Eph","Ep"]},
+            {fr:"Philippiens",en:"Philippians",abrev:["Phil","Ph","Php"]},
+            {fr:"Colossiens",en:"Colossians",abrev:["Col"]},
+            {fr:"1 Thessaloniciens",en:"1 Thessalonians",abrev:["1 Thess","1 Th","1Thess","1Th"]},
+            {fr:"2 Thessaloniciens",en:"2 Thessalonians",abrev:["2 Thess","2 Th","2Thess","2Th"]},
+            {fr:"1 Timothée",en:"1 Timothy",abrev:["1 Tim","1 Ti","1Tim","1Ti"]},
+            {fr:"2 Timothée",en:"2 Timothy",abrev:["2 Tim","2 Ti","2Tim","2Ti"]},
+            {fr:"Tite",en:"Titus",abrev:["Tit","Tt"]},
+            {fr:"Philémon",en:"Philemon",abrev:["Philém","Phm","Phlm"]},
+            {fr:"Hébreux",en:"Hebrews",abrev:["Héb","Hé","Heb","He"]},
+            {fr:"Jacques",en:"James",abrev:["Jacq","Jac","Jas","Jm"]},
+            {fr:"1 Pierre",en:"1 Peter",abrev:["1 Pi","1 P","1Pi","1P","1 Pe"]},
+            {fr:"2 Pierre",en:"2 Peter",abrev:["2 Pi","2 P","2Pi","2P","2 Pe"]},
+            {fr:"1 Jean",en:"1 John",abrev:["1 Jn","1 J","1Jn","1J"]},
+            {fr:"2 Jean",en:"2 John",abrev:["2 Jn","2 J","2Jn","2J"]},
+            {fr:"3 Jean",en:"3 John",abrev:["3 Jn","3 J","3Jn","3J"]},
+            {fr:"Jude",en:"Jude",abrev:["Jud","Jd"]},
+            {fr:"Apocalypse",en:"Revelation",abrev:["Apoc","Ap","Rev"]}
+        ];
+
+        function estReference(ligne) {
+            if (!ligne || typeof ligne !== 'string') return false;
+            const regexReference = /^(.+?)\s+(\d+):(\d+)(-\d+)?$/;
+            const match = ligne.trim().match(regexReference);
+            if (!match) return false;
+            const livrePotentiel = match[1].trim();
+            return LIVRES_BIBLE.some(livre => {
+                if (livre.fr.toLowerCase() === livrePotentiel.toLowerCase()) return true;
+                if (livre.en.toLowerCase() === livrePotentiel.toLowerCase()) return true;
+                return livre.abrev.some(ab => ab.toLowerCase() === livrePotentiel.toLowerCase());
+            });
+        }
+
+        function estVerset(text) {
+            if (!text || typeof text !== 'string') return false;
+            const lignes = text.split(/\r?\n/);
+            if (lignes.length === 0) return false;
+            
+            // Format 1 : Référence en haut
+            if (lignes.length >= 1 && estReference(lignes[0])) {
+                console.log('[Chants] Verset détecté (Format 1) - MASQUÉ');
+                return true;
+            }
+            
+            // Format 2 : Référence en bas
+            if (lignes.length >= 2 && estReference(lignes[lignes.length - 1])) {
+                console.log('[Chants] Verset détecté (Format 2) - MASQUÉ');
+                return true;
+            }
+            
+            return false;
+        }
+
+        // ==================== AFFICHAGE ====================
+        const chantTextEl = document.getElementById('chant-text');
+        let lastText = "";
+
+        function updateDisplay(text) {
+            if (text !== lastText) {
+                lastText = text;
+                
+                // Si texte vide, masquer
+                if (text.trim() === "") {
+                    chantTextEl.classList.remove('visible');
+                    chantTextEl.innerHTML = "";
+                    return;
+                }
+                
+                // Si c'est un verset, MASQUER
+                if (estVerset(text)) {
+                    chantTextEl.classList.remove('visible');
+                    chantTextEl.innerHTML = "";
+                    return;
+                }
+                
+                // Sinon, c'est un chant → AFFICHER
+                console.log('[Chants] Texte affiché');
+                chantTextEl.innerHTML = text.replace(/\n/g, "<br>");
+                chantTextEl.classList.add('visible');
+            }
+        }
+
+        // ==================== CONNEXION PROPRESENTER ====================
+        let pollInterval = null;
+
+        async function pollUpdate() {
+            try {
+                const response = await fetch(`${API_BASE}/v1/status/slide`);
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+                const data = await response.json();
+                const currentText = data.current?.text || "";
+                updateDisplay(currentText);
+            } catch (err) {
+                console.error('[Chants] Erreur polling:', err);
+            }
+        }
+
+        function startPolling() {
+            console.log('[Chants] Démarrage polling sur', API_BASE);
+            if (pollInterval) clearInterval(pollInterval);
+            pollUpdate();
+            pollInterval = setInterval(pollUpdate, 500);
+        }
+
+        // Démarrage automatique
+        window.addEventListener('DOMContentLoaded', () => {
+            startPolling();
+        });
+    </script>
+</body>
+</html>

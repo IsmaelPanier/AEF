@@ -10,7 +10,7 @@
         :root {
             --couleur-principale: #802B36;
             --position-texte: flex-end;
-            --taille-texte-normal: 50px;
+            --taille-texte-normal: 30px;
         }
 
         * {
@@ -151,7 +151,6 @@
             50% { opacity: 0.6; }
         }
 
-        /* ==================== SÉLECTEUR DE COULEURS ==================== */
         .color-selector {
             display: flex;
             gap: 8px;
@@ -190,7 +189,6 @@
             text-shadow: 0 0 3px black;
         }
 
-        /* ==================== SÉLECTEUR DE POSITION ==================== */
         .position-selector {
             display: flex;
             gap: 10px;
@@ -216,7 +214,6 @@
             border-color: #4CAF50;
         }
 
-        /* ==================== SÉLECTEUR DE TAILLE ==================== */
         .size-selector {
             display: flex;
             gap: 10px;
@@ -242,7 +239,6 @@
             border-color: #4CAF50;
         }
 
-        /* ==================== CHECKBOX PERSONNALISÉ ==================== */
         .checkbox-container {
             display: flex;
             align-items: center;
@@ -274,7 +270,6 @@
             font-weight: bold;
         }
 
-        /* ==================== AFFICHAGE TEXTE SIMPLE ==================== */
         #simple-text {
             color: white;
             font-size: var(--taille-texte-normal);
@@ -300,7 +295,6 @@
             display: block;
         }
 
-        /* ==================== AFFICHAGE VERSET/MESSAGE (LOWER THIRD) ==================== */
         .lt-wrapper {
             width: 1400px;
             max-width: 90%;
@@ -395,14 +389,12 @@
             margin-right: 3px;
         }
 
-        /* ==================== ÉTAT MASQUÉ ==================== */
         body.hidden-display #simple-text,
         body.hidden-display .lt-wrapper {
             display: none !important;
             opacity: 0 !important;
         }
 
-        /* ==================== NOTIFICATION ==================== */
         .notification {
             position: fixed;
             top: 20px;
@@ -425,7 +417,6 @@
             transform: translateX(0);
         }
 
-        /* ==================== INDICATEUR DE STATUT (MODE SOURCE) ==================== */
         .status-indicator {
             position: fixed;
             top: 10px;
@@ -537,7 +528,7 @@
         <div class="bar-row">
             <span class="bar-label">📏 Taille texte:</span>
             <div class="size-selector">
-                <div class="size-option selected" data-size="50" onclick="selectSize('50')">Normal</div>
+                <div class="size-option selected" data-size="30" onclick="selectSize('30')">Normal</div>
                 <div class="size-option" data-size="70" onclick="selectSize('70')">Grand</div>
                 <div class="size-option" data-size="90" onclick="selectSize('90')">Très grand</div>
             </div>
