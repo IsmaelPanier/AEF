@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Affichage ProPresenter - Minimal</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700;800&display=swap');
+
+        :root {
+            --couleur-principale: #802B36;
+            --taille-texte-normal: 50px;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: transparent;
+            font-family: 'Montserrat', sans-serif;
+            height: 100vh;
+            width: 100vw;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end; /* Positionné en bas par défaut */
+            align-items: center;
+            padding-bottom: 50px;
+        }
+
+        /* Styles pour le texte simple */
+        #simple-text {
+            color: white;
+            font-size: var(--taille-texte-normal);
+            font-weight: bold;
+            text-align: center;
+            max-width: 90%;
+            line-height: 1.2;
+            text-shadow: 2px 2px 4px rgba(0,0,0,1);
+            padding: 15px 30px;
+            transition: opacity 0.3s ease;
+            opacity: 0;
+            display: none;
+        }
+
+        #simple-text.active {
+            opacity: 1;
+            display: block;
+        }
+
+        /* Layout pour les Versets (Lower Third) */
+        .lt-wrapper {
+            width: 1400px;
+            max-width: 90%;
+            min-height: 120px;
+            position: relative;
+            opacity: 0;
+            transform: translateY(100px);
+            transition: all 1.2s cubic-bezier(0.16, 1, 0.3, 1);
+            display: none;
+        }
+
+        .lt-wrapper.visible {
+            opacity: 1;
+            transform: translateY(0);
+            display: block;
+        }
+
+        .church-badge {
+            background: white;
+            color: #333;
+            display: inline-block;
+            padding: 8px 20px;
+            font-size: 1rem;
+            font-weight: 800;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            position: absolute;
+            top: -20px;
+            left: 60px;
+            z-index: 10;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+        }
+
+        .main-card {
+            background-color: var(--couleur-principale);
+            padding: 35px 60px 35px 100px;
+            position: relative;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+            color: white;
+            min-height: 100px;
+            display: flex;
+            align-items: center;
+        }
+
+        .main-card::before {
+            content: "";
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 60px;
+            background: rgba(0,0,0,0.2);
+        }
+
+        .verse-text {
+            font-size: 1.35rem;
+            font-weight: 700;
+            line-height: 1.4;
+            text-transform: uppercase;
+        }
+
+        .verse-text sup {
+            font-size: 0.7em;
+            font-weight: 800;
+            opacity: 0.8;
+            margin-right: 3px;
+        }
+
+        /* Indicateur de connexion discret */
+        .status-indicator {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: red;
+            opacity: 0.5;
+            transition: all 0.3s;
+        }
+        .status-indicator.connected { background: lime; opacity: 0; }
+    </style>
+</head>
+<body>
+
+    <div class="status-indicator" id="statusIndicator"></div>
+
+    <div id="simple-text"></div>
+
+    <div class="lt-wrapper" id="ltContainer">
+        <div class="church-badge" id="refBadge"></div>
+        <div class="main-card">
+            <div class="verse-text" id="verseBody"></div>
+        </div>
+    </div>
+
+<script>
+    // Liste simplifiée pour la détection
+    const LIVRES_BIBLE = ["Genèse", "Exode", "Lévitique", "Nombres", "Deutéronome", "Josué", "Juges", "Ruth", "1 Samuel", "2 Samuel", "1 Rois", "2 Rois", "1 Chroniques", "2 Chroniques", "Esdras", "Néhémie", "Esther", "Job", "Psaumes", "Proverbes", "Ecclésiaste", "Cantique", "Ésaïe", "Jérémie", "Lamentations", "Ézéchiel", "Daniel", "Osée", "Joël", "Amos", "Abdias", "Jonas", "Michée", "Nahum", "Habakuk", "Sophonie", "Aggée", "Zacharie", "Malachie", "Matthieu", "Marc", "Luc", "Jean", "Actes", "Romains", "1 Corinthiens", "2 Corinthiens", "Galates", "Éphésiens", "Philippiens", "Colossiens", "1 Thessaloniciens", "2 Thessaloniciens", "1 Timothée", "2 Timothée", "Tite", "Philémon", "Hébreux", "Jacques", "1 Pierre", "2 Pierre", "1 Jean", "2 Jean", "3 Jean", "Jude", "Apocalypse"];
+
+    let API_BASE = "http://192.168.1.22:49196"; // À adapter à votre IP ProPresenter
+    let lastText = "";
+
+    function detecterVerset(text) {
+        const lignes = text.trim().split(/\r?\n/);
+        const regexRef = /^(.+?)\s+(\d+):(\d+)(-\d+)?$/;
+        
+        // Vérifie si la première ou dernière ligne est une référence
+        if (regexRef.test(lignes[0])) {
+            return { ref: lignes[0], content: lignes.slice(1).join(' ') };
+        } else if (regexRef.test(lignes[lignes.length-1])) {
+            return { ref: lignes[lignes.length-1], content: lignes.slice(0, -1).join(' ') };
+        }
+        return null;
+    }
+
+    function updateDisplay(text) {
+        if (text === lastText) return;
+        lastText = text;
+
+        const simpleTextEl = document.getElementById("simple-text");
+        const ltContainer = document.getElementById("ltContainer");
+        const refBadge = document.getElementById("refBadge");
+        const verseBody = document.getElementById("verseBody");
+
+        if (!text.trim()) {
+            simpleTextEl.classList.remove("active");
+            ltContainer.classList.remove("visible");
+            return;
+        }
+
+        const verset = detecterVerset(text);
+
+        if (verset) {
+            simpleTextEl.classList.remove("active");
+            refBadge.innerText = verset.ref;
+            verseBody.innerHTML = verset.content;
+            ltContainer.classList.add("visible");
+        } else {
+            ltContainer.classList.remove("visible");
+            simpleTextEl.innerHTML = text.replace(/\n/g, "<br>");
+            simpleTextEl.classList.add("active");
+        }
+    }
+
+    async function poll() {
+        try {
+            const res = await fetch(`${API_BASE}/v1/status/slide`);
+            const data = await res.json();
+            document.getElementById('statusIndicator').classList.add('connected');
+            updateDisplay(data.current?.text || "");
+        } catch (e) {
+            document.getElementById('statusIndicator').classList.remove('connected');
+        }
+    }
+
+    setInterval(poll, 500);
+</script>
+</body>
+</html>
