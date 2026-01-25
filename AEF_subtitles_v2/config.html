@@ -201,12 +201,12 @@
 </head>
 <body>
     <div class="container">
-        <h1>Configuration Régie Virtuelle v4.0</h1>
+        <h1>⚙️ Configuration Régie Virtuelle v4.0</h1>
         
         <!-- API ProPresenter -->
         <div class="section">
             <label>URL API ProPresenter</label>
-            <input type="text" id="propresenter_api" placeholder="http://192.168.1.22:49196">
+            <input type="text" id="propresenter_api" placeholder="http://127.0.0.1:49196">
         </div>
         
         <!-- Message de prédication -->
@@ -245,9 +245,9 @@
         <div class="section">
             <label>Taille du texte</label>
             <div class="button-group">
-                <div class="btn-option selected" data-size="50" onclick="selectSize('50')">Normal (50px)</div>
-                <div class="btn-option" data-size="70" onclick="selectSize('70')">Grand (70px)</div>
-                <div class="btn-option" data-size="90" onclick="selectSize('90')">Très grand (90px)</div>
+                <div class="btn-option selected" data-size="35" onclick="selectSize('35')">Normal (35px)</div>
+                <div class="btn-option" data-size="50" onclick="selectSize('50')">Grand (50px)</div>
+                <div class="btn-option" data-size="70" onclick="selectSize('70')">Très grand (70px)</div>
             </div>
         </div>
         
@@ -261,30 +261,30 @@
         </div>
         
         <!-- Bouton sauvegarder -->
-        <button class="save-button" onclick="saveConfig()">Sauvegarder la configuration</button>
+        <button class="save-button" onclick="saveConfig()">💾 Sauvegarder la configuration</button>
         <div class="status-message" id="statusMessage"></div>
         
         <!-- Info -->
         <div class="info">
-            <strong>URL pour OBS/Streamlabs:</strong><br>
+            <strong>📺 URL pour OBS/Streamlabs:</strong><br>
             <code id="obsUrl">http://localhost:3000/display.html</code>
             <br><br>
-            <strong>Contrôle depuis téléphone/tablette:</strong><br>
-            Remplacez <code>localhost</code> par l'IP de votre Mac
+            <strong>📱 Contrôle depuis téléphone/tablette:</strong><br>
+            Remplacez <code>localhost</code> par l'IP de l'ordinateur
         </div>
     </div>
 
     <script>
-        const API_URL = 'http://localhost:3000/api/config';
+        const API_URL = window.location.protocol + '//' + window.location.host + '/api/config';
         
         let config = {
             couleur: '#802B36',
             position: 'bas',
-            taille: '50',
+            taille: '35',
             titre_message: '',
             titre_active: false,
             is_hidden: false,
-            propresenter_api: 'http://192.168.1.22:49196'
+            propresenter_api: 'http://127.0.0.1:49196'
         };
         
         // Charger config au démarrage
@@ -342,6 +342,9 @@
             } else {
                 document.getElementById('checkboxHidden').classList.remove('checked');
             }
+            
+            // URL OBS (dynamique)
+            document.getElementById('obsUrl').textContent = window.location.protocol + '//' + window.location.host + '/display.html';
         }
         
         // Sauvegarder config
@@ -359,14 +362,14 @@
                 const result = await response.json();
                 
                 if (result.success) {
-                    showStatus('Configuration sauvegardée avec succès', 'success');
+                    showStatus('✅ Configuration sauvegardée avec succès', 'success');
                     console.log('[SAVE] Config sauvegardée:', result.config);
                 } else {
-                    showStatus('Erreur lors de la sauvegarde', 'error');
+                    showStatus('❌ Erreur lors de la sauvegarde', 'error');
                 }
             } catch (err) {
                 console.error('[ERREUR] Sauvegarde:', err);
-                showStatus('Erreur de connexion au serveur', 'error');
+                showStatus('❌ Erreur de connexion au serveur', 'error');
             }
         }
         

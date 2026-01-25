@@ -1,29 +1,36 @@
 const express = require('express');
+const http = require('http');
+const WebSocket = require('ws');
 const fs = require('fs');
 const path = require('path');
 const cors = require('cors');
+const fetch = require('node-fetch');
 
 const app = express();
+const server = http.createServer(app);
+const wss = new WebSocket.Server({ server });
+
 const PORT = 3000;
 const CONFIG_FILE = path.join(__dirname, 'config.json');
-
-// Middleware
-app.use(cors());
-app.use(express.json());
-app.use(express.static(__dirname));
 
 // Configuration par défaut
 const DEFAULT_CONFIG = {
     couleur: '#802B36',
     position: 'bas',
-    taille: '50',
+    taille: '35',
     titre_message: '',
     titre_active: false,
     is_hidden: false,
-    propresenter_api: 'http://192.168.1.22:49196'
+    propresenter_api: 'http://127.0.0.1:49196'
 };
 
-// Charger ou créer la configuration
+// ==================== MIDDLEWARE ====================
+app.use(cors());
+app.use(express.json());
+app.use(express.static(__dirname));
+
+// ==================== CONFIGURATION ====================
+
 function loadConfig() {
     try {
         if (fs.existsSync(CONFIG_FILE)) {
@@ -31,16 +38,15 @@ function loadConfig() {
             return JSON.parse(data);
         }
     } catch (err) {
-        console.error('Erreur lecture config:', err);
+        console.error('[ERREUR] Lecture config:', err);
     }
     return { ...DEFAULT_CONFIG };
 }
 
-// Sauvegarder la configuration
 function saveConfig(config) {
     try {
         fs.writeFileSync(CONFIG_FILE, JSON.stringify(config, null, 2), 'utf8');
-        console.log('[CONFIG] Sauvegardé:', config);
+        console.log('[CONFIG] Sauvegardé');
         return true;
     } catch (err) {
         console.error('[ERREUR] Sauvegarde:', err);
@@ -49,6 +55,92 @@ function saveConfig(config) {
 }
 
 let currentConfig = loadConfig();
+
+// ==================== PROPRESENTER POLLING ====================
+
+let lastText = '';
+let isProPresenterConnected = false;
+
+async function pollProPresenter() {
+    try {
+        const response = await fetch(`${currentConfig.propresenter_api}/v1/status/slide`, {
+            timeout: 5000
+        });
+        
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+        }
+        
+        const data = await response.json();
+        const currentText = data.current?.text || '';
+        
+        // Première connexion réussie
+        if (!isProPresenterConnected) {
+            isProPresenterConnected = true;
+            console.log('[ProPresenter] ✅ Connecté');
+        }
+        
+        // Si le texte a changé, broadcaster à tous les clients
+        if (currentText !== lastText) {
+            lastText = currentText;
+            broadcastToClients({
+                type: 'text_update',
+                text: currentText,
+                timestamp: Date.now()
+            });
+        }
+        
+    } catch (err) {
+        if (isProPresenterConnected) {
+            console.error('[ProPresenter] ❌ Erreur:', err.message);
+            isProPresenterConnected = false;
+        }
+    }
+}
+
+// Démarrer le polling toutes les 500ms
+setInterval(pollProPresenter, 500);
+
+// ==================== WEBSOCKET ====================
+
+let clients = new Set();
+
+wss.on('connection', (ws) => {
+    console.log('[WebSocket] 🔌 Nouveau client connecté');
+    clients.add(ws);
+    
+    // Envoyer la config actuelle au nouveau client
+    ws.send(JSON.stringify({
+        type: 'config',
+        config: currentConfig
+    }));
+    
+    // Envoyer le dernier texte connu
+    ws.send(JSON.stringify({
+        type: 'text_update',
+        text: lastText,
+        timestamp: Date.now()
+    }));
+    
+    ws.on('close', () => {
+        console.log('[WebSocket] 🔌 Client déconnecté');
+        clients.delete(ws);
+    });
+    
+    ws.on('error', (err) => {
+        console.error('[WebSocket] ❌ Erreur:', err);
+        clients.delete(ws);
+    });
+});
+
+function broadcastToClients(message) {
+    const data = JSON.stringify(message);
+    clients.forEach((client) => {
+        if (client.readyState === WebSocket.OPEN) {
+            client.send(data);
+        }
+    });
+}
 
 // ==================== ROUTES API ====================
 
@@ -59,10 +151,15 @@ app.get('/api/config', (req, res) => {
 
 // POST /api/config - Écrire la configuration
 app.post('/api/config', (req, res) => {
-    console.log('[UPDATE] Config:', req.body);
+    console.log('[API] Mise à jour config');
     currentConfig = { ...currentConfig, ...req.body };
     
     if (saveConfig(currentConfig)) {
+        // Broadcaster la nouvelle config à tous les clients
+        broadcastToClients({
+            type: 'config',
+            config: currentConfig
+        });
         res.json({ success: true, config: currentConfig });
     } else {
         res.status(500).json({ success: false, error: 'Erreur sauvegarde' });
@@ -71,38 +168,56 @@ app.post('/api/config', (req, res) => {
 
 // GET /api/config/reset - Réinitialiser
 app.get('/api/config/reset', (req, res) => {
-    console.log('[RESET] Configuration');
+    console.log('[API] Reset configuration');
     currentConfig = { ...DEFAULT_CONFIG };
     saveConfig(currentConfig);
+    broadcastToClients({
+        type: 'config',
+        config: currentConfig
+    });
     res.json({ success: true, config: currentConfig });
 });
 
-// ==================== SERVEUR ====================
+// GET /api/status - Statut du serveur
+app.get('/api/status', (req, res) => {
+    res.json({
+        server: 'running',
+        propresenter_connected: isProPresenterConnected,
+        propresenter_api: currentConfig.propresenter_api,
+        clients_connected: clients.size,
+        last_text: lastText
+    });
+});
 
-app.listen(PORT, '0.0.0.0', () => {
+// ==================== DÉMARRAGE SERVEUR ====================
+
+server.listen(PORT, '0.0.0.0', () => {
     console.log('========================================');
-    console.log('  REGIE VIRTUELLE v4.0 - SERVEUR');
+    console.log('  RÉGIE VIRTUELLE v4.0 - SERVEUR');
     console.log('========================================');
     console.log('');
-    console.log('Serveur démarré sur le port', PORT);
+    console.log('✅ Serveur démarré sur le port', PORT);
     console.log('');
-    console.log('URLs:');
-    console.log('  Configuration: http://localhost:' + PORT + '/config.html');
-    console.log('  Affichage OBS: http://localhost:' + PORT + '/display.html');
+    console.log('📄 Pages:');
+    console.log('   Configuration: http://localhost:' + PORT + '/config.html');
+    console.log('   Affichage OBS: http://localhost:' + PORT + '/display.html');
     console.log('');
-    console.log('API ProPresenter par défaut:');
-    console.log('  ' + currentConfig.propresenter_api);
+    console.log('🎮 API ProPresenter:');
+    console.log('   ' + currentConfig.propresenter_api);
     console.log('');
     
     const os = require('os');
     const interfaces = os.networkInterfaces();
-    console.log('Accès réseau:');
+    console.log('🌐 Accès réseau:');
     for (const name of Object.keys(interfaces)) {
         for (const iface of interfaces[name]) {
             if (iface.family === 'IPv4' && !iface.internal) {
-                console.log('  http://' + iface.address + ':' + PORT + '/config.html');
+                console.log('   http://' + iface.address + ':' + PORT + '/config.html');
+                console.log('   http://' + iface.address + ':' + PORT + '/display.html');
             }
         }
     }
     console.log('');
+    console.log('⏳ Attente connexion ProPresenter...');
+    console.log('========================================');
 });

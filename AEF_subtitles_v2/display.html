@@ -3,14 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Affichage - Régie</title>
+    <title>Affichage - Régie v4.0</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700;800&display=swap');
 
         :root {
             --couleur-principale: #802B36;
             --position-texte: flex-end;
-            --taille-texte-normal: 50px;
+            --taille-texte-normal: 35px;
+            --taille-verset: 1.35rem;
         }
 
         * {
@@ -150,7 +151,7 @@
         }
 
         .verse-text {
-            font-size: 1.35rem;
+            font-size: var(--taille-verset);
             font-weight: 700;
             line-height: 1.4;
             text-transform: uppercase;
@@ -169,69 +170,225 @@
             display: none !important;
             opacity: 0 !important;
         }
+
+        /* Indicateur de statut */
+        .status-indicator {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: rgba(255, 0, 0, 0.8);
+            box-shadow: 0 0 10px rgba(255, 0, 0, 0.5);
+            z-index: 1500;
+            transition: all 0.3s ease;
+        }
+
+        .status-indicator.connected {
+            background: rgba(0, 255, 0, 0.8);
+            box-shadow: 0 0 10px rgba(0, 255, 0, 0.5);
+        }
+
+        .status-indicator.connecting {
+            background: rgba(255, 165, 0, 0.8);
+            box-shadow: 0 0 10px rgba(255, 165, 0, 0.5);
+            animation: pulse 1s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.6; }
+        }
+
+        .status-indicator.auto-hide {
+            opacity: 0;
+            pointer-events: none;
+        }
     </style>
 </head>
 <body class="position-bas">
+    <!-- Indicateur de statut -->
+    <div class="status-indicator connecting" id="statusIndicator"></div>
+
+    <!-- Affichage texte simple -->
     <div id="simple-text"></div>
+
+    <!-- Affichage verset/message (Lower Third) -->
     <div class="lt-wrapper" id="ltContainer">
         <div class="church-badge" id="refBadge">Jean 3:16</div>
         <div class="main-card">
             <div class="fold-effect"></div>
             <div class="content-anim" id="textContent">
-                <div class="verse-text" id="verseBody">Car Dieu a tant aimé le monde...</div>
+                <div class="verse-text" id="verseBody">En attente de connexion...</div>
             </div>
         </div>
     </div>
 
     <script>
-        const CONFIG_API_URL = 'http://localhost:3000/api/config';
-        const LIVRES_BIBLE=[{fr:"Genèse",en:"Genesis",abrev:["Gen","Gn","Ge"]},{fr:"Exode",en:"Exodus",abrev:["Exo","Ex","Exod"]},{fr:"Lévitique",en:"Leviticus",abrev:["Lév","Lv","Lev"]},{fr:"Nombres",en:"Numbers",abrev:["Nom","Nb","Num"]},{fr:"Deutéronome",en:"Deuteronomy",abrev:["Deut","Dt","Deu"]},{fr:"Josué",en:"Joshua",abrev:["Jos","Josh"]},{fr:"Juges",en:"Judges",abrev:["Jug","Jg","Judg"]},{fr:"Ruth",en:"Ruth",abrev:["Rt","Ru"]},{fr:"1 Samuel",en:"1 Samuel",abrev:["1 Sam","1 S","1Sam","1S"]},{fr:"2 Samuel",en:"2 Samuel",abrev:["2 Sam","2 S","2Sam","2S"]},{fr:"1 Rois",en:"1 Kings",abrev:["1 Ro","1 R","1Ro","1R","1 Ki"]},{fr:"2 Rois",en:"2 Kings",abrev:["2 Ro","2 R","2Ro","2R","2 Ki"]},{fr:"1 Chroniques",en:"1 Chronicles",abrev:["1 Chr","1 Ch","1Chr","1Ch"]},{fr:"2 Chroniques",en:"2 Chronicles",abrev:["2 Chr","2 Ch","2Chr","2Ch"]},{fr:"Esdras",en:"Ezra",abrev:["Esd","Ezr"]},{fr:"Néhémie",en:"Nehemiah",abrev:["Néh","Neh","Ne"]},{fr:"Esther",en:"Esther",abrev:["Est","Esth","Es"]},{fr:"Job",en:"Job",abrev:["Jb"]},{fr:"Psaumes",en:"Psalms",abrev:["Ps","Psa","Psaume"]},{fr:"Proverbes",en:"Proverbs",abrev:["Prov","Pr","Pro"]},{fr:"Ecclésiaste",en:"Ecclesiastes",abrev:["Ecc","Ec","Eccl"]},{fr:"Cantique des Cantiques",en:"Song of Solomon",abrev:["Cant","Ct","Song","SOS"]},{fr:"Ésaïe",en:"Isaiah",abrev:["Ésa","És","Isa","Is"]},{fr:"Jérémie",en:"Jeremiah",abrev:["Jér","Jr","Jer"]},{fr:"Lamentations",en:"Lamentations",abrev:["Lam","La"]},{fr:"Ézéchiel",en:"Ezekiel",abrev:["Ézé","Éz","Eze","Ezek"]},{fr:"Daniel",en:"Daniel",abrev:["Dan","Da","Dn"]},{fr:"Osée",en:"Hosea",abrev:["Os","Hos"]},{fr:"Joël",en:"Joel",abrev:["Joe","Jl"]},{fr:"Amos",en:"Amos",abrev:["Am"]},{fr:"Abdias",en:"Obadiah",abrev:["Abd","Ob","Oba"]},{fr:"Jonas",en:"Jonah",abrev:["Jon","Jnh"]},{fr:"Michée",en:"Micah",abrev:["Mic","Mi"]},{fr:"Nahum",en:"Nahum",abrev:["Nah","Na"]},{fr:"Habakuk",en:"Habakkuk",abrev:["Hab","Ha"]},{fr:"Sophonie",en:"Zephaniah",abrev:["Soph","So","Zep"]},{fr:"Aggée",en:"Haggai",abrev:["Agg","Ag","Hag"]},{fr:"Zacharie",en:"Zechariah",abrev:["Zach","Za","Zec"]},{fr:"Malachie",en:"Malachi",abrev:["Mal","Ml"]},{fr:"Matthieu",en:"Matthew",abrev:["Matt","Mt","Mat"]},{fr:"Marc",en:"Mark",abrev:["Mc","Mr","Mar"]},{fr:"Luc",en:"Luke",abrev:["Lc","Lk","Lu"]},{fr:"Jean",en:"John",abrev:["Jn","Joh"]},{fr:"Actes",en:"Acts",abrev:["Act","Ac"]},{fr:"Romains",en:"Romans",abrev:["Rom","Ro","Rm"]},{fr:"1 Corinthiens",en:"1 Corinthians",abrev:["1 Cor","1 Co","1Cor","1Co"]},{fr:"2 Corinthiens",en:"2 Corinthians",abrev:["2 Cor","2 Co","2Cor","2Co"]},{fr:"Galates",en:"Galatians",abrev:["Gal","Ga"]},{fr:"Éphésiens",en:"Ephesians",abrev:["Éph","Ép","Eph","Ep"]},{fr:"Philippiens",en:"Philippians",abrev:["Phil","Ph","Php"]},{fr:"Colossiens",en:"Colossians",abrev:["Col"]},{fr:"1 Thessaloniciens",en:"1 Thessalonians",abrev:["1 Thess","1 Th","1Thess","1Th"]},{fr:"2 Thessaloniciens",en:"2 Thessalonians",abrev:["2 Thess","2 Th","2Thess","2Th"]},{fr:"1 Timothée",en:"1 Timothy",abrev:["1 Tim","1 Ti","1Tim","1Ti"]},{fr:"2 Timothée",en:"2 Timothy",abrev:["2 Tim","2 Ti","2Tim","2Ti"]},{fr:"Tite",en:"Titus",abrev:["Tit","Tt"]},{fr:"Philémon",en:"Philemon",abrev:["Philém","Phm","Phlm"]},{fr:"Hébreux",en:"Hebrews",abrev:["Héb","Hé","Heb","He"]},{fr:"Jacques",en:"James",abrev:["Jacq","Jac","Jas","Jm"]},{fr:"1 Pierre",en:"1 Peter",abrev:["1 Pi","1 P","1Pi","1P","1 Pe"]},{fr:"2 Pierre",en:"2 Peter",abrev:["2 Pi","2 P","2Pi","2P","2 Pe"]},{fr:"1 Jean",en:"1 John",abrev:["1 Jn","1 J","1Jn","1J"]},{fr:"2 Jean",en:"2 John",abrev:["2 Jn","2 J","2Jn","2J"]},{fr:"3 Jean",en:"3 John",abrev:["3 Jn","3 J","3Jn","3J"]},{fr:"Jude",en:"Jude",abrev:["Jud","Jd"]},{fr:"Apocalypse",en:"Revelation",abrev:["Apoc","Ap","Rev"]}];
+        // ==================== CONFIGURATION ====================
+        const CONFIG_API_URL = window.location.protocol + '//' + window.location.host + '/api/config';
+        
+        // ==================== TABLEAU DES LIVRES DE LA BIBLE ====================
+        const LIVRES_BIBLE = [
+            { fr: "Genèse", en: "Genesis", abrev: ["Gen", "Gn", "Ge"] },
+            { fr: "Exode", en: "Exodus", abrev: ["Exo", "Ex", "Exod"] },
+            { fr: "Lévitique", en: "Leviticus", abrev: ["Lév", "Lv", "Lev"] },
+            { fr: "Nombres", en: "Numbers", abrev: ["Nom", "Nb", "Num"] },
+            { fr: "Deutéronome", en: "Deuteronomy", abrev: ["Deut", "Dt", "Deu"] },
+            { fr: "Josué", en: "Joshua", abrev: ["Jos", "Josh"] },
+            { fr: "Juges", en: "Judges", abrev: ["Jug", "Jg", "Judg"] },
+            { fr: "Ruth", en: "Ruth", abrev: ["Rt", "Ru"] },
+            { fr: "1 Samuel", en: "1 Samuel", abrev: ["1 Sam", "1 S", "1Sam", "1S"] },
+            { fr: "2 Samuel", en: "2 Samuel", abrev: ["2 Sam", "2 S", "2Sam", "2S"] },
+            { fr: "1 Rois", en: "1 Kings", abrev: ["1 Ro", "1 R", "1Ro", "1R", "1 Ki"] },
+            { fr: "2 Rois", en: "2 Kings", abrev: ["2 Ro", "2 R", "2Ro", "2R", "2 Ki"] },
+            { fr: "1 Chroniques", en: "1 Chronicles", abrev: ["1 Chr", "1 Ch", "1Chr", "1Ch"] },
+            { fr: "2 Chroniques", en: "2 Chronicles", abrev: ["2 Chr", "2 Ch", "2Chr", "2Ch"] },
+            { fr: "Esdras", en: "Ezra", abrev: ["Esd", "Ezr"] },
+            { fr: "Néhémie", en: "Nehemiah", abrev: ["Néh", "Neh", "Ne"] },
+            { fr: "Esther", en: "Esther", abrev: ["Est", "Esth", "Es"] },
+            { fr: "Job", en: "Job", abrev: ["Jb"] },
+            { fr: "Psaumes", en: "Psalms", abrev: ["Ps", "Psa", "Psaume"] },
+            { fr: "Proverbes", en: "Proverbs", abrev: ["Prov", "Pr", "Pro"] },
+            { fr: "Ecclésiaste", en: "Ecclesiastes", abrev: ["Ecc", "Ec", "Eccl"] },
+            { fr: "Cantique des Cantiques", en: "Song of Solomon", abrev: ["Cant", "Ct", "Song", "SOS"] },
+            { fr: "Ésaïe", en: "Isaiah", abrev: ["Ésa", "És", "Isa", "Is"] },
+            { fr: "Jérémie", en: "Jeremiah", abrev: ["Jér", "Jr", "Jer"] },
+            { fr: "Lamentations", en: "Lamentations", abrev: ["Lam", "La"] },
+            { fr: "Ézéchiel", en: "Ezekiel", abrev: ["Ézé", "Éz", "Eze", "Ezek"] },
+            { fr: "Daniel", en: "Daniel", abrev: ["Dan", "Da", "Dn"] },
+            { fr: "Osée", en: "Hosea", abrev: ["Os", "Hos"] },
+            { fr: "Joël", en: "Joel", abrev: ["Joe", "Jl"] },
+            { fr: "Amos", en: "Amos", abrev: ["Am"] },
+            { fr: "Abdias", en: "Obadiah", abrev: ["Abd", "Ob", "Oba"] },
+            { fr: "Jonas", en: "Jonah", abrev: ["Jon", "Jnh"] },
+            { fr: "Michée", en: "Micah", abrev: ["Mic", "Mi"] },
+            { fr: "Nahum", en: "Nahum", abrev: ["Nah", "Na"] },
+            { fr: "Habakuk", en: "Habakkuk", abrev: ["Hab", "Ha"] },
+            { fr: "Sophonie", en: "Zephaniah", abrev: ["Soph", "So", "Zep"] },
+            { fr: "Aggée", en: "Haggai", abrev: ["Agg", "Ag", "Hag"] },
+            { fr: "Zacharie", en: "Zechariah", abrev: ["Zach", "Za", "Zec"] },
+            { fr: "Malachie", en: "Malachi", abrev: ["Mal", "Ml"] },
+            { fr: "Matthieu", en: "Matthew", abrev: ["Matt", "Mt", "Mat"] },
+            { fr: "Marc", en: "Mark", abrev: ["Mc", "Mr", "Mar"] },
+            { fr: "Luc", en: "Luke", abrev: ["Lc", "Lk", "Lu"] },
+            { fr: "Jean", en: "John", abrev: ["Jn", "Joh"] },
+            { fr: "Actes", en: "Acts", abrev: ["Act", "Ac"] },
+            { fr: "Romains", en: "Romans", abrev: ["Rom", "Ro", "Rm"] },
+            { fr: "1 Corinthiens", en: "1 Corinthians", abrev: ["1 Cor", "1 Co", "1Cor", "1Co"] },
+            { fr: "2 Corinthiens", en: "2 Corinthians", abrev: ["2 Cor", "2 Co", "2Cor", "2Co"] },
+            { fr: "Galates", en: "Galatians", abrev: ["Gal", "Ga"] },
+            { fr: "Éphésiens", en: "Ephesians", abrev: ["Éph", "Ép", "Eph", "Ep"] },
+            { fr: "Philippiens", en: "Philippians", abrev: ["Phil", "Ph", "Php"] },
+            { fr: "Colossiens", en: "Colossians", abrev: ["Col"] },
+            { fr: "1 Thessaloniciens", en: "1 Thessalonians", abrev: ["1 Thess", "1 Th", "1Thess", "1Th"] },
+            { fr: "2 Thessaloniciens", en: "2 Thessalonians", abrev: ["2 Thess", "2 Th", "2Thess", "2Th"] },
+            { fr: "1 Timothée", en: "1 Timothy", abrev: ["1 Tim", "1 Ti", "1Tim", "1Ti"] },
+            { fr: "2 Timothée", en: "2 Timothy", abrev: ["2 Tim", "2 Ti", "2Tim", "2Ti"] },
+            { fr: "Tite", en: "Titus", abrev: ["Tit", "Tt"] },
+            { fr: "Philémon", en: "Philemon", abrev: ["Philém", "Phm", "Phlm"] },
+            { fr: "Hébreux", en: "Hebrews", abrev: ["Héb", "Hé", "Heb", "He"] },
+            { fr: "Jacques", en: "James", abrev: ["Jacq", "Jac", "Jas", "Jm"] },
+            { fr: "1 Pierre", en: "1 Peter", abrev: ["1 Pi", "1 P", "1Pi", "1P", "1 Pe"] },
+            { fr: "2 Pierre", en: "2 Peter", abrev: ["2 Pi", "2 P", "2Pi", "2P", "2 Pe"] },
+            { fr: "1 Jean", en: "1 John", abrev: ["1 Jn", "1 J", "1Jn", "1J"] },
+            { fr: "2 Jean", en: "2 John", abrev: ["2 Jn", "2 J", "2Jn", "2J"] },
+            { fr: "3 Jean", en: "3 John", abrev: ["3 Jn", "3 J", "3Jn", "3J"] },
+            { fr: "Jude", en: "Jude", abrev: ["Jud", "Jd"] },
+            { fr: "Apocalypse", en: "Revelation", abrev: ["Apoc", "Ap", "Rev"] }
+        ];
 
-        function estReference(ligne){if(!ligne||typeof ligne!=='string')return false;const regexReference=/^(.+?)\s+(\d+):(\d+)(-\d+)?$/;const match=ligne.trim().match(regexReference);if(!match)return false;const livrePotentiel=match[1].trim();return LIVRES_BIBLE.some(livre=>{if(livre.fr.toLowerCase()===livrePotentiel.toLowerCase())return true;if(livre.en.toLowerCase()===livrePotentiel.toLowerCase())return true;return livre.abrev.some(ab=>ab.toLowerCase()===livrePotentiel.toLowerCase())});}
+        function estReference(ligne) {
+            if (!ligne || typeof ligne !== 'string') return false;
+            const regexReference = /^(.+?)\s+(\d+):(\d+)(-\d+)?$/;
+            const match = ligne.trim().match(regexReference);
+            if (!match) return false;
+            const livrePotentiel = match[1].trim();
+            return LIVRES_BIBLE.some(livre => {
+                if (livre.fr.toLowerCase() === livrePotentiel.toLowerCase()) return true;
+                if (livre.en.toLowerCase() === livrePotentiel.toLowerCase()) return true;
+                return livre.abrev.some(ab => ab.toLowerCase() === livrePotentiel.toLowerCase());
+            });
+        }
 
-        function detecterVerset(text){if(!text||typeof text!=='string')return null;const cleanText=text.trim();const lignes=cleanText.split(/\r?\n/);if(lignes.length===0)return null;if(lignes.length>=1&&estReference(lignes[0])){const reference=lignes[0].trim();let texteVerset=lignes.slice(1).join('\n').trim();texteVerset=formaterNumeroVerset(texteVerset);return{reference:reference,texte:texteVerset};}if(lignes.length>=2&&estReference(lignes[lignes.length-1])){const reference=lignes[lignes.length-1].trim();let texteVerset=lignes.slice(0,-1).join('\n').trim();texteVerset=formaterNumeroVerset(texteVerset);return{reference:reference,texte:texteVerset};}return null;}
+        function detecterVerset(text) {
+            if (!text || typeof text !== 'string') return null;
+            const cleanText = text.trim();
+            const lignes = cleanText.split(/\r?\n/);
+            if (lignes.length === 0) return null;
+            
+            // Référence en haut
+            if (lignes.length >= 1 && estReference(lignes[0])) {
+                const reference = lignes[0].trim();
+                let texteVerset = lignes.slice(1).join('\n').trim();
+                texteVerset = formaterNumeroVerset(texteVerset);
+                return { reference: reference, texte: texteVerset };
+            }
+            
+            // Référence en bas
+            if (lignes.length >= 2 && estReference(lignes[lignes.length - 1])) {
+                const reference = lignes[lignes.length - 1].trim();
+                let texteVerset = lignes.slice(0, -1).join('\n').trim();
+                texteVerset = formaterNumeroVerset(texteVerset);
+                return { reference: reference, texte: texteVerset };
+            }
+            
+            return null;
+        }
 
-        function formaterNumeroVerset(texte){const regexNumero=/^(\d+)(.+)$/;const match=texte.match(regexNumero);if(match){return`<sup>${match[1]}</sup>${match[2]}`;}return texte;}
+        function formaterNumeroVerset(texte) {
+            const regexNumero = /^(\d+)(.+)$/;
+            const match = texte.match(regexNumero);
+            if (match) {
+                return `<sup>${match[1]}</sup>${match[2]}`;
+            }
+            return texte;
+        }
 
-        let API_BASE="http://192.168.1.22:49196";
-        const simpleTextEl=document.getElementById("simple-text");
-        const ltContainer=document.getElementById("ltContainer");
-        const refBadge=document.getElementById("refBadge");
-        const verseBody=document.getElementById("verseBody");
-        const textContent=document.getElementById("textContent");
-        let lastText="";let pollInterval=null;let currentMode=null;let titreActive=false;const INACTIVITY_THRESHOLD=20000;let lastUpdateTime=Date.now();
+        // ==================== VARIABLES GLOBALES ====================
+        let API_BASE = "http://127.0.0.1:49196";
+        const simpleTextEl = document.getElementById("simple-text");
+        const ltContainer = document.getElementById("ltContainer");
+        const refBadge = document.getElementById("refBadge");
+        const verseBody = document.getElementById("verseBody");
+        const textContent = document.getElementById("textContent");
+        const statusIndicator = document.getElementById("statusIndicator");
+        
+        let lastText = "";
+        let pollInterval = null;
+        let currentMode = null;
+        let titreActive = false;
+        let statusHideTimeout = null;
+        const INACTIVITY_THRESHOLD = 20000; // 20 secondes
+        let lastUpdateTime = Date.now();
 
-        // Charger config depuis serveur
+        // ==================== CHARGEMENT CONFIG ====================
+        let previousTitreActive = false;  // Garder l'état précédent
+        
         async function loadConfig() {
             try {
                 const response = await fetch(CONFIG_API_URL);
                 const config = await response.json();
                 applyConfig(config);
             } catch (err) {
-                console.error('[CONFIG] Erreur:', err);
+                console.error('[CONFIG] Erreur chargement:', err);
             }
         }
 
-        // Appliquer config
         function applyConfig(config) {
-            // URL ProPresenter
+            // API ProPresenter
             API_BASE = config.propresenter_api;
             console.log('[CONFIG] API ProPresenter:', API_BASE);
             
             // Couleur
             document.documentElement.style.setProperty('--couleur-principale', config.couleur);
-            console.log('[CONFIG] Couleur:', config.couleur);
             
             // Taille
             document.documentElement.style.setProperty('--taille-texte-normal', config.taille + 'px');
-            console.log('[CONFIG] Taille:', config.taille + 'px');
             
             // Position
             document.body.className = 'position-' + config.position;
-            console.log('[CONFIG] Position:', config.position);
-            
-            // Titre active
-            titreActive = config.titre_active;
             
             // Masqué
             if (config.is_hidden) {
@@ -240,10 +397,24 @@
                 document.body.classList.remove('hidden-display');
             }
             
-            // Afficher titre si actif
-            if (titreActive) {
+            // Titre - Seulement agir si l'état a changé
+            if (config.titre_active && !titreActive) {
+                // Activation du titre
+                titreActive = true;
                 afficherTitre(config.titre_message);
+            } else if (!config.titre_active && titreActive) {
+                // Désactivation du titre
+                titreActive = false;
+                currentMode = null;
+                ltContainer.classList.remove('visible');
+                simpleTextEl.classList.remove('active');
+            } else if (config.titre_active && titreActive) {
+                // Titre déjà actif, juste mettre à jour le texte si changé
+                if (verseBody.innerHTML !== config.titre_message) {
+                    verseBody.innerHTML = config.titre_message || "MESSAGE";
+                }
             }
+            // Si titre_active est false et titreActive est false, ne rien faire (laisser ProPresenter contrôler)
         }
 
         function afficherTitre(titre) {
@@ -256,28 +427,124 @@
             currentMode = 'message';
         }
 
-        function updateDisplay(text){if(titreActive){return;}if(text!==lastText){lastText=text;const now=Date.now();const timeSinceLastUpdate=now-lastUpdateTime;if(text.trim()===""){simpleTextEl.classList.remove("active");ltContainer.classList.remove("visible");currentMode=null;return;}const verset=detecterVerset(text);if(verset){const wasVersetMode=(currentMode==='verset');const isInactive=timeSinceLastUpdate>INACTIVITY_THRESHOLD;if(wasVersetMode&&!isInactive){textContent.classList.add('fade-out');refBadge.style.opacity="0";setTimeout(()=>{refBadge.innerText=verset.reference;verseBody.innerHTML=verset.texte;textContent.classList.remove('fade-out');refBadge.style.opacity="1";},600);}else{simpleTextEl.classList.remove("active");ltContainer.classList.remove("visible");refBadge.innerText=verset.reference;verseBody.innerHTML=verset.texte;void ltContainer.offsetWidth;ltContainer.classList.add("visible");currentMode='verset';}}else{ltContainer.classList.remove("visible");simpleTextEl.innerHTML=text.replace(/\n/g,"<br>");simpleTextEl.classList.add("active");currentMode='simple';}lastUpdateTime=now;}}
+        // ==================== AFFICHAGE ====================
+        function updateDisplay(text) {
+            if (titreActive) return;
+            
+            if (text !== lastText) {
+                lastText = text;
+                const now = Date.now();
+                const timeSinceLastUpdate = now - lastUpdateTime;
+                
+                if (text.trim() === "") {
+                    simpleTextEl.classList.remove("active");
+                    ltContainer.classList.remove("visible");
+                    currentMode = null;
+                    return;
+                }
 
-        async function pollUpdate(){try{const response=await fetch(`${API_BASE}/v1/status/slide`);if(!response.ok){throw new Error(`HTTP ${response.status}`);}const data=await response.json();const currentText=data.current?.text||"";updateDisplay(currentText);}catch(err){console.error('[ProPresenter] Erreur:',err);}}
+                const verset = detecterVerset(text);
+                
+                if (verset) {
+                    const wasVersetMode = (currentMode === 'verset');
+                    const isInactive = timeSinceLastUpdate > INACTIVITY_THRESHOLD;
+                    
+                    if (wasVersetMode && !isInactive) {
+                        // FADE uniquement
+                        console.log('[Animation] FADE');
+                        textContent.classList.add('fade-out');
+                        refBadge.style.opacity = "0";
+                        
+                        setTimeout(() => {
+                            refBadge.innerText = verset.reference;
+                            verseBody.innerHTML = verset.texte;
+                            textContent.classList.remove('fade-out');
+                            refBadge.style.opacity = "1";
+                        }, 600);
+                    } else {
+                        // SLIDE-UP
+                        console.log('[Animation] SLIDE-UP');
+                        simpleTextEl.classList.remove("active");
+                        ltContainer.classList.remove("visible");
+                        
+                        refBadge.innerText = verset.reference;
+                        verseBody.innerHTML = verset.texte;
+                        
+                        void ltContainer.offsetWidth;
+                        ltContainer.classList.add("visible");
+                        currentMode = 'verset';
+                    }
+                } else {
+                    // TEXTE SIMPLE
+                    ltContainer.classList.remove("visible");
+                    simpleTextEl.innerHTML = text.replace(/\n/g, "<br>");
+                    simpleTextEl.classList.add("active");
+                    currentMode = 'simple';
+                }
+                
+                lastUpdateTime = now;
+            }
+        }
 
-        function startPolling(){if(pollInterval)clearInterval(pollInterval);pollUpdate();pollInterval=setInterval(pollUpdate,500);}
+        function setStatus(status) {
+            statusIndicator.className = 'status-indicator ' + status;
+            if (status === 'connected') {
+                if (statusHideTimeout) clearTimeout(statusHideTimeout);
+                statusHideTimeout = setTimeout(() => {
+                    statusIndicator.classList.add('auto-hide');
+                }, 3000);
+            } else {
+                statusIndicator.classList.remove('auto-hide');
+            }
+        }
 
-        // Recharger config toutes les 2 secondes
-        setInterval(loadConfig, 2000);
+        // ==================== POLLING PROPRESENTER ====================
+        async function pollUpdate() {
+            try {
+                const response = await fetch(`${API_BASE}/v1/status/slide`);
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+                const data = await response.json();
+                const currentText = data.current?.text || "";
+                updateDisplay(currentText);
+                setStatus('connected');
+            } catch (err) {
+                console.error('[ProPresenter] Erreur:', err);
+                setStatus('connecting');
+            }
+        }
 
-        window.addEventListener('DOMContentLoaded',()=>{loadConfig();startPolling();});
+        function startPolling() {
+            if (pollInterval) clearInterval(pollInterval);
+            pollUpdate();
+            pollInterval = setInterval(pollUpdate, 500);
+        }
 
-        // Raccourci Ctrl+F pour plein écran
-        document.addEventListener('keydown',(e)=>{
-            if((e.ctrlKey || e.metaKey) && e.key==='f'){
+        // ==================== DÉMARRAGE ====================
+        window.addEventListener('DOMContentLoaded', () => {
+            console.log('[Display] v4.0 - Démarrage');
+            loadConfig();
+            startPolling();
+            
+            // Recharger config toutes les 2 secondes
+            setInterval(loadConfig, 2000);
+        });
+
+        // ==================== RACCOURCIS CLAVIER ====================
+        document.addEventListener('keydown', (e) => {
+            // Ctrl+F ou Cmd+F pour plein écran
+            if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
                 e.preventDefault();
-                if(!document.fullscreenElement){
+                if (!document.fullscreenElement) {
                     document.documentElement.requestFullscreen();
-                }else{
+                } else {
                     document.exitFullscreen();
                 }
             }
-            if(e.key==='Escape' && document.fullscreenElement){
+            
+            // Échap pour sortir du plein écran
+            if (e.key === 'Escape' && document.fullscreenElement) {
                 document.exitFullscreen();
             }
         });

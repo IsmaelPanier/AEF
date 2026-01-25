@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ProRemote | Control Panel</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/feather-icons"></script>
+    <style>
+        :root {
+            --bg-dark: #0f1115;
+            --card-bg: #1a1d23;
+            --gold: #c5a059;
+            --gold-hover: #e0b96f;
+            --text-main: #e2e8f0;
+            --text-dim: #94a3b8;
+            --danger: #ef4444;
+            --success: #22c55e;
+            --transition: all 0.2s ease;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* --- HEADER --- */
+        header {
+            padding: 1rem 2rem;
+            background: var(--card-bg);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #2d333d;
+        }
+
+        .connection-box {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        input[type="text"] {
+            background: #0f1115;
+            border: 1px solid #334155;
+            color: white;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-family: monospace;
+            outline: none;
+        }
+
+        .btn-connect {
+            background: var(--gold);
+            color: #1a1d23;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: var(--transition);
+        }
+
+        .btn-connect.connected { background: var(--success); color: white; }
+
+        /* --- MAIN CONTENT --- */
+        main {
+            flex: 1;
+            display: grid;
+            grid-template-columns: 1fr 320px;
+            gap: 2rem;
+            padding: 2rem;
+            max-width: 1400px;
+            margin: 0 auto;
+            width: 100%;
+        }
+
+        .card {
+            background: var(--card-bg);
+            border-radius: 16px;
+            padding: 1.5rem;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
+        }
+
+        /* Message Area */
+        .message-section { display: flex; flex-direction: column; gap: 1.5rem; }
+        
+        .textarea-container { position: relative; }
+        
+        textarea {
+            width: 100%;
+            height: 200px;
+            background: #0f1115;
+            border: 2px solid #2d333d;
+            border-radius: 12px;
+            color: white;
+            padding: 1.5rem;
+            font-size: 1.5rem;
+            resize: none;
+            transition: var(--transition);
+        }
+
+        textarea:focus { border-color: var(--gold); outline: none; }
+
+        /* Customization Controls */
+        .control-group { margin-bottom: 2rem; }
+        .control-label {
+            display: block;
+            color: var(--text-dim);
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 12px;
+        }
+
+        .segmented-control {
+            display: flex;
+            background: #0f1115;
+            padding: 4px;
+            border-radius: 8px;
+        }
+
+        .seg-btn {
+            flex: 1;
+            background: transparent;
+            border: none;
+            color: var(--text-dim);
+            padding: 10px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .seg-btn.active {
+            background: var(--gold);
+            color: #1a1d23;
+        }
+
+        /* --- FOOTER CONTROLS --- */
+        .output-controls {
+            grid-column: span 2;
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            padding-top: 1rem;
+        }
+
+        .btn-action {
+            padding: 12px 24px;
+            border-radius: 8px;
+            border: 1px solid #334155;
+            background: var(--card-bg);
+            color: white;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            transition: var(--transition);
+        }
+
+        .btn-action:hover { background: #2d333d; }
+        .btn-hide { border-color: var(--danger); color: var(--danger); }
+        .btn-hide:hover { background: var(--danger); color: white; }
+
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: var(--success);
+            padding: 12px 24px;
+            border-radius: 8px;
+            transform: translateY(100px);
+            transition: transform 0.3s ease;
+        }
+
+        .toast.show { transform: translateY(0); }
+
+    </style>
+</head>
+<body>
+
+<header>
+    <div style="display: flex; align-items: center; gap: 10px;">
+        <div style="width: 12px; height: 12px; background: var(--gold); border-radius: 50%;"></div>
+        <h1 style="font-size: 1.2rem; font-weight: 600;">ProRemote</h1>
+    </div>
+
+    <div class="connection-box">
+        <i data-feather="globe" style="color: var(--text-dim)"></i>
+        <input type="text" id="ipAddress" value="http://10.0.0.9:51586">
+        <button id="connectBtn" class="btn-connect" onclick="toggleConnect()">
+            <i data-feather="zap"></i>
+            <span>Connecter</span>
+        </button>
+    </div>
+</header>
+
+<main>
+    <div class="card message-section">
+        <div class="control-group" style="margin:0">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                <span class="control-label" style="margin:0">Contenu du message</span>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <span style="font-size: 0.8rem; color: var(--text-dim)">Afficher</span>
+                    <input type="checkbox" id="liveToggle" checked>
+                </div>
+            </div>
+            <div class="textarea-container">
+                <textarea id="messageText" placeholder="Saisissez le texte à afficher..."></textarea>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="control-group">
+            <span class="control-label">Position</span>
+            <div class="segmented-control">
+                <button class="seg-btn" onclick="setPos(this)"><i data-feather="align-justify" style="transform: rotate(180deg) scaleY(-1);"></i></button>
+                <button class="seg-btn active" onclick="setPos(this)"><i data-feather="minus"></i></button>
+                <button class="seg-btn" onclick="setPos(this)"><i data-feather="align-justify"></i></button>
+            </div>
+        </div>
+
+        <div class="control-group">
+            <span class="control-label">Taille du texte</span>
+            <div class="segmented-control">
+                <button class="seg-btn" onclick="setSize(this, 'normal')">A</button>
+                <button class="seg-btn active" onclick="setSize(this, 'large')"><span style="font-size: 1.2rem">A</span></button>
+                <button class="seg-btn" onclick="setSize(this, 'xl')"><span style="font-size: 1.5rem">A</span></button>
+            </div>
+        </div>
+
+        <div class="control-group">
+            <span class="control-label">Couleur dominante</span>
+            <div style="display: flex; gap: 10px;">
+                <div onclick="setColor(this)" style="width: 40px; height: 40px; background: var(--gold); border-radius: 50%; cursor: pointer; border: 3px solid white;"></div>
+                <div onclick="setColor(this)" style="width: 40px; height: 40px; background: #ffffff; border-radius: 50%; cursor: pointer; border: 3px solid transparent;"></div>
+                <div onclick="setColor(this)" style="width: 40px; height: 40px; background: #3b82f6; border-radius: 50%; cursor: pointer; border: 3px solid transparent;"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="output-controls">
+        <button class="btn-action btn-hide" onclick="clearOutput()">
+            <i data-feather="eye-off"></i>
+            Masquer (CLEAR)
+        </button>
+        <button class="btn-action" onclick="copyObsLink()">
+            <i data-feather="link"></i>
+            Lien OBS
+        </button>
+        <button class="btn-action" onclick="toggleFS()">
+            <i data-feather="maximize"></i>
+            Plein écran [F]
+        </button>
+    </div>
+</main>
+
+<div id="toast" class="toast">Lien copié dans le presse-papier !</div>
+
+<script>
+    // Initialisation des icônes
+    feather.replace();
+
+    // Logique de Connexion
+    function toggleConnect() {
+        const btn = document.getElementById('connectBtn');
+        const span = btn.querySelector('span');
+        const icon = btn.querySelector('i');
+        
+        btn.innerHTML = '<i data-feather="loader" class="animate-spin"></i><span>Connexion...</span>';
+        feather.replace();
+
+        setTimeout(() => {
+            btn.classList.toggle('connected');
+            if(btn.classList.contains('connected')) {
+                btn.innerHTML = '<i data-feather="check-circle"></i><span>Connecté</span>';
+            } else {
+                btn.innerHTML = '<i data-feather="zap"></i><span>Connecter</span>';
+            }
+            feather.replace();
+        }, 1000);
+    }
+
+    // Gestion des sélecteurs segmentés
+    function setPos(btn) {
+        btn.parentNode.querySelectorAll('.seg-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+    }
+
+    function setSize(btn, size) {
+        btn.parentNode.querySelectorAll('.seg-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        console.log("Taille définie sur : " + size);
+    }
+
+    function setColor(el) {
+        el.parentNode.querySelectorAll('div').forEach(d => d.style.borderColor = 'transparent');
+        el.style.borderColor = 'white';
+    }
+
+    // Actions
+    function copyObsLink() {
+        const dummy = document.createElement('input');
+        document.body.appendChild(dummy);
+        dummy.value = "http://localhost:51586/stage-display";
+        dummy.select();
+        document.execCommand('copy');
+        document.body.removeChild(dummy);
+        
+        const toast = document.getElementById('toast');
+        toast.classList.add('show');
+        setTimeout(() => toast.classList.remove('show'), 2000);
+    }
+
+    function clearOutput() {
+        document.getElementById('messageText').value = '';
+        console.log("Output cleared");
+    }
+
+    function toggleFS() {
+        if (!document.fullscreenElement) {
+            document.documentElement.requestFullscreen();
+        } else {
+            document.exitFullscreen();
+        }
+    }
+
+    document.addEventListener('keydown', (e) => {
+        if(e.key.toLowerCase() === 'f' && document.activeElement.tagName !== 'TEXTAREA') {
+            toggleFS();
+        }
+    });
+</script>
+
+</body>
+</html>
