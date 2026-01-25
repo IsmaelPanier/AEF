@@ -1,9 +1,9 @@
 {
   "couleur": "#A5763A",
   "position": "bas",
-  "taille": "50",
-  "titre_message": "",
+  "taille": "35",
+  "titre_message": "Dans le combat spirituel : la Force du chrétien est en Christ",
   "titre_active": false,
-  "is_hidden": false,
+  "is_hidden": true,
   "propresenter_api": "http://192.168.1.22:49196"
 }
