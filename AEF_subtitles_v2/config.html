@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Configuration - Régie </title>
+    <title>Configuration AEF - Régie</title>
     <style>
         * {
             margin: 0;
@@ -27,11 +27,17 @@
         }
         
         h1 {
-            font-size: 24px;
-            margin-bottom: 30px;
+            font-size: 28px;
+            margin-bottom: 5px;
             color: #333;
-            border-bottom: 2px solid #eee;
+        }
+        
+        .subtitle {
+            font-size: 14px;
+            color: #888;
+            margin-bottom: 25px;
             padding-bottom: 15px;
+            border-bottom: 2px solid #eee;
         }
         
         .section {
@@ -46,18 +52,47 @@
             margin-bottom: 8px;
         }
         
-        input[type="text"] {
+        input[type="text"],
+        input[type="number"] {
             width: 100%;
             padding: 10px;
             border: 1px solid #ddd;
             border-radius: 4px;
             font-size: 14px;
-            font-family: monospace;
         }
         
-        input[type="text"]:focus {
+        input[type="text"]:focus,
+        input[type="number"]:focus {
             outline: none;
             border-color: #4a90e2;
+        }
+        
+        .input-group {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .input-group input {
+            flex: 1;
+        }
+        
+        .input-suffix {
+            display: flex;
+            align-items: center;
+        }
+        
+        .input-suffix input {
+            flex: 1;
+        }
+        
+        .input-suffix span {
+            padding: 10px 15px;
+            background: #f5f5f5;
+            border: 1px solid #ddd;
+            border-left: none;
+            border-radius: 0 4px 4px 0;
+            font-size: 14px;
+            color: #666;
         }
         
         .color-grid {
@@ -117,6 +152,11 @@
             background: #f9f9f9;
             border-radius: 4px;
             cursor: pointer;
+            transition: background 0.3s;
+        }
+        
+        .checkbox-field:hover {
+            background: #f0f0f0;
         }
         
         .checkbox-custom {
@@ -128,6 +168,7 @@
             align-items: center;
             justify-content: center;
             background: white;
+            flex-shrink: 0;
         }
         
         .checkbox-custom.checked {
@@ -151,10 +192,28 @@
             font-size: 15px;
             font-weight: 600;
             cursor: pointer;
+            transition: background 0.3s;
         }
         
         .save-button:hover {
             background: #357abd;
+        }
+        
+        .copy-button {
+            padding: 8px 16px;
+            background: #28a745;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.3s;
+            white-space: nowrap;
+        }
+        
+        .copy-button:hover {
+            background: #218838;
         }
         
         .status-message {
@@ -197,21 +256,44 @@
         .info strong {
             color: #0066cc;
         }
+        
+        .url-display {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            background: white;
+            padding: 10px;
+            border-radius: 4px;
+            margin-top: 8px;
+        }
+        
+        .url-display code {
+            flex: 1;
+            padding: 8px 12px;
+            background: #f5f5f5;
+            border-radius: 4px;
+            font-size: 13px;
+            word-break: break-all;
+        }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>⚙️ Configuration Régie Virtuelle v4.0</h1>
+        <h1>Configuration AEF</h1>
+        <div class="subtitle">Régie virtuelle sous-titres</div>
         
         <!-- API ProPresenter -->
         <div class="section">
-            <label>URL API ProPresenter</label>
-            <input type="text" id="propresenter_api" placeholder="http://127.0.0.1:49196">
+            <label>🎮 API ProPresenter</label>
+            <div class="input-group">
+                <input type="text" id="propresenter_ip" placeholder="10.0.0.9" style="flex: 2;">
+                <input type="text" id="propresenter_port" placeholder="49196" style="flex: 1;">
+            </div>
         </div>
         
         <!-- Message de prédication -->
         <div class="section">
-            <label>Titre du message de prédication</label>
+            <label>📖 Titre du message de prédication</label>
             <input type="text" id="titre_message" placeholder="Ex: Le pardon de Dieu">
             <div class="checkbox-field" onclick="toggleTitre()" style="margin-top: 10px;">
                 <div class="checkbox-custom" id="checkboxTitre"></div>
@@ -221,7 +303,7 @@
         
         <!-- Couleur -->
         <div class="section">
-            <label>Couleur du lower third</label>
+            <label>🎨 Couleur du lower third</label>
             <div class="color-grid">
                 <div class="color-option selected" style="background-color: #802B36;" data-color="#802B36" onclick="selectColor('#802B36')"></div>
                 <div class="color-option" style="background-color: #7A3F3A;" data-color="#7A3F3A" onclick="selectColor('#7A3F3A')"></div>
@@ -233,7 +315,7 @@
         
         <!-- Position -->
         <div class="section">
-            <label>Position du texte à l'écran</label>
+            <label>📍 Position du texte à l'écran</label>
             <div class="button-group">
                 <div class="btn-option" data-position="haut" onclick="selectPosition('haut')">Haut</div>
                 <div class="btn-option" data-position="centre" onclick="selectPosition('centre')">Centre</div>
@@ -241,20 +323,19 @@
             </div>
         </div>
         
-        <!-- Taille -->
+        <!-- Taille personnalisée -->
         <div class="section">
-            <label>Taille du texte</label>
-            <div class="button-group">
-                <div class="btn-option selected" data-size="35" onclick="selectSize('35')">Normal (35px)</div>
-                <div class="btn-option" data-size="50" onclick="selectSize('50')">Grand (50px)</div>
-                <div class="btn-option" data-size="70" onclick="selectSize('70')">Très grand (70px)</div>
+            <label>📏 Taille du texte (en pixels)</label>
+            <div class="input-suffix">
+                <input type="number" id="taille_text" min="10" max="200" value="35" oninput="previewTaille()">
+                <span>px</span>
             </div>
         </div>
         
-        <!-- Masquer affichage -->
+        <!-- Masquer affichage avec action immédiate -->
         <div class="section">
-            <label>Visibilité de l'affichage</label>
-            <div class="checkbox-field" onclick="toggleHidden()">
+            <label>👁️ Visibilité de l'affichage</label>
+            <div class="checkbox-field" onclick="toggleHiddenImmediate()">
                 <div class="checkbox-custom" id="checkboxHidden"></div>
                 <span>Masquer l'affichage (mode caché)</span>
             </div>
@@ -264,13 +345,13 @@
         <button class="save-button" onclick="saveConfig()">💾 Sauvegarder la configuration</button>
         <div class="status-message" id="statusMessage"></div>
         
-        <!-- Info -->
+        <!-- Info avec bouton copier -->
         <div class="info">
-            <strong>📺 URL pour OBS/Streamlabs:</strong><br>
-            <code id="obsUrl">http://localhost:3000/display.html</code>
-            <br><br>
-            <strong>📱 Contrôle depuis téléphone/tablette:</strong><br>
-            Remplacez <code>localhost</code> par l'IP de l'ordinateur
+            <strong>📺 URL pour OBS/Streamlabs:</strong>
+            <div class="url-display">
+                <code id="obsUrl">http://localhost:3000/display.html</code>
+                <button class="copy-button" onclick="copyOBSUrl()">📋 Copier</button>
+            </div>
         </div>
     </div>
 
@@ -303,8 +384,19 @@
         
         // Appliquer config à l'interface
         function applyConfig() {
-            document.getElementById('propresenter_api').value = config.propresenter_api;
+            // Parser l'URL API ProPresenter
+            try {
+                const url = new URL(config.propresenter_api);
+                document.getElementById('propresenter_ip').value = url.hostname;
+                document.getElementById('propresenter_port').value = url.port || '49196';
+            } catch (e) {
+                // Si parsing échoue, valeurs par défaut
+                document.getElementById('propresenter_ip').value = '127.0.0.1';
+                document.getElementById('propresenter_port').value = '49196';
+            }
+            
             document.getElementById('titre_message').value = config.titre_message;
+            document.getElementById('taille_text').value = config.taille;
             
             // Couleur
             document.querySelectorAll('.color-option').forEach(el => {
@@ -318,14 +410,6 @@
             document.querySelectorAll('[data-position]').forEach(el => {
                 el.classList.remove('selected');
                 if (el.dataset.position === config.position) {
-                    el.classList.add('selected');
-                }
-            });
-            
-            // Taille
-            document.querySelectorAll('[data-size]').forEach(el => {
-                el.classList.remove('selected');
-                if (el.dataset.size === config.taille) {
                     el.classList.add('selected');
                 }
             });
@@ -344,13 +428,32 @@
             }
             
             // URL OBS (dynamique)
-            document.getElementById('obsUrl').textContent = window.location.protocol + '//' + window.location.host + '/display.html';
+            updateOBSUrl();
+        }
+        
+        function updateOBSUrl() {
+            const ip = document.getElementById('propresenter_ip').value || 'localhost';
+            const port = window.location.port || '3000';
+            document.getElementById('obsUrl').textContent = `http://${ip}:${port}/display.html`;
+        }
+        
+        // Preview taille en temps réel
+        function previewTaille() {
+            const taille = document.getElementById('taille_text').value;
+            if (taille && taille > 0) {
+                config.taille = taille;
+                // Envoyer immédiatement au serveur pour aperçu
+                sendConfigImmediate();
+            }
         }
         
         // Sauvegarder config
         async function saveConfig() {
-            config.propresenter_api = document.getElementById('propresenter_api').value.trim();
+            const ip = document.getElementById('propresenter_ip').value.trim();
+            const port = document.getElementById('propresenter_port').value.trim();
+            config.propresenter_api = `http://${ip}:${port}`;
             config.titre_message = document.getElementById('titre_message').value.trim();
+            config.taille = document.getElementById('taille_text').value;
             
             try {
                 const response = await fetch(API_URL, {
@@ -364,6 +467,7 @@
                 if (result.success) {
                     showStatus('✅ Configuration sauvegardée avec succès', 'success');
                     console.log('[SAVE] Config sauvegardée:', result.config);
+                    updateOBSUrl();
                 } else {
                     showStatus('❌ Erreur lors de la sauvegarde', 'error');
                 }
@@ -373,11 +477,25 @@
             }
         }
         
+        // Envoyer config immédiatement (pour preview)
+        async function sendConfigImmediate() {
+            try {
+                await fetch(API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(config)
+                });
+            } catch (err) {
+                console.error('[ERREUR] Envoi immédiat:', err);
+            }
+        }
+        
         // Sélectionner couleur
         function selectColor(color) {
             document.querySelectorAll('.color-option').forEach(el => el.classList.remove('selected'));
             event.target.classList.add('selected');
             config.couleur = color;
+            sendConfigImmediate(); // Aperçu immédiat
         }
         
         // Sélectionner position
@@ -385,13 +503,7 @@
             document.querySelectorAll('[data-position]').forEach(el => el.classList.remove('selected'));
             event.target.classList.add('selected');
             config.position = position;
-        }
-        
-        // Sélectionner taille
-        function selectSize(size) {
-            document.querySelectorAll('[data-size]').forEach(el => el.classList.remove('selected'));
-            event.target.classList.add('selected');
-            config.taille = size;
+            sendConfigImmediate(); // Aperçu immédiat
         }
         
         // Toggle titre
@@ -403,10 +515,12 @@
             } else {
                 checkbox.classList.remove('checked');
             }
+            config.titre_message = document.getElementById('titre_message').value.trim();
+            sendConfigImmediate(); // Aperçu immédiat
         }
         
-        // Toggle masqué
-        function toggleHidden() {
+        // Toggle masqué avec action immédiate
+        function toggleHiddenImmediate() {
             config.is_hidden = !config.is_hidden;
             const checkbox = document.getElementById('checkboxHidden');
             if (config.is_hidden) {
@@ -414,6 +528,18 @@
             } else {
                 checkbox.classList.remove('checked');
             }
+            // Envoi immédiat pour masquer/afficher sans sauvegarder
+            sendConfigImmediate();
+        }
+        
+        // Copier URL OBS
+        function copyOBSUrl() {
+            const url = document.getElementById('obsUrl').textContent;
+            navigator.clipboard.writeText(url).then(() => {
+                showStatus('✅ URL copiée dans le presse-papiers !', 'success');
+            }).catch(() => {
+                showStatus('❌ Erreur lors de la copie', 'error');
+            });
         }
         
         // Afficher message de statut
@@ -430,6 +556,9 @@
         
         // Charger au démarrage
         window.addEventListener('DOMContentLoaded', loadConfig);
+        
+        // Mise à jour URL OBS quand IP change
+        document.getElementById('propresenter_ip').addEventListener('input', updateOBSUrl);
         
         // Raccourci Ctrl+S pour sauvegarder
         document.addEventListener('keydown', (e) => {

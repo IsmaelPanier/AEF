@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Affichage - Régie v4.0</title>
+    <title>Affichage - Régie AEF v4.2</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700;800&display=swap');
 
@@ -61,7 +61,7 @@
             font-family: 'Montserrat', sans-serif;
             text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
             padding: 15px 30px;
-            transition: opacity 0.3s ease;
+            transition: opacity 0.8s ease;
             opacity: 0;
             display: none;
         }
@@ -69,6 +69,11 @@
         #simple-text.active {
             opacity: 1;
             display: block;
+        }
+
+        /* Mode caché avec fondu */
+        body.hidden-display #simple-text.active {
+            opacity: 0;
         }
 
         .lt-wrapper {
@@ -87,6 +92,12 @@
             opacity: 1;
             transform: translateY(0);
             display: block;
+        }
+
+        /* Mode caché avec fondu pour lower third */
+        body.hidden-display .lt-wrapper.visible {
+            opacity: 0;
+            transition: opacity 0.8s ease;
         }
 
         .church-badge {
@@ -163,12 +174,6 @@
             font-weight: 800;
             opacity: 0.8;
             margin-right: 3px;
-        }
-
-        body.hidden-display #simple-text,
-        body.hidden-display .lt-wrapper {
-            display: none !important;
-            opacity: 0 !important;
         }
 
         /* Indicateur de statut */
@@ -318,7 +323,6 @@
             const lignes = cleanText.split(/\r?\n/);
             if (lignes.length === 0) return null;
             
-            // Référence en haut
             if (lignes.length >= 1 && estReference(lignes[0])) {
                 const reference = lignes[0].trim();
                 let texteVerset = lignes.slice(1).join('\n').trim();
@@ -326,7 +330,6 @@
                 return { reference: reference, texte: texteVerset };
             }
             
-            // Référence en bas
             if (lignes.length >= 2 && estReference(lignes[lignes.length - 1])) {
                 const reference = lignes[lignes.length - 1].trim();
                 let texteVerset = lignes.slice(0, -1).join('\n').trim();
@@ -360,12 +363,10 @@
         let currentMode = null;
         let titreActive = false;
         let statusHideTimeout = null;
-        const INACTIVITY_THRESHOLD = 20000; // 20 secondes
+        const INACTIVITY_THRESHOLD = 20000;
         let lastUpdateTime = Date.now();
 
         // ==================== CHARGEMENT CONFIG ====================
-        let previousTitreActive = false;  // Garder l'état précédent
-        
         async function loadConfig() {
             try {
                 const response = await fetch(CONFIG_API_URL);
@@ -377,44 +378,34 @@
         }
 
         function applyConfig(config) {
-            // API ProPresenter
             API_BASE = config.propresenter_api;
             console.log('[CONFIG] API ProPresenter:', API_BASE);
             
-            // Couleur
             document.documentElement.style.setProperty('--couleur-principale', config.couleur);
-            
-            // Taille
             document.documentElement.style.setProperty('--taille-texte-normal', config.taille + 'px');
-            
-            // Position
             document.body.className = 'position-' + config.position;
             
-            // Masqué
+            // Mode masqué avec fondu
             if (config.is_hidden) {
                 document.body.classList.add('hidden-display');
             } else {
                 document.body.classList.remove('hidden-display');
             }
             
-            // Titre - Seulement agir si l'état a changé
+            // Gestion du titre
             if (config.titre_active && !titreActive) {
-                // Activation du titre
                 titreActive = true;
                 afficherTitre(config.titre_message);
             } else if (!config.titre_active && titreActive) {
-                // Désactivation du titre
                 titreActive = false;
                 currentMode = null;
                 ltContainer.classList.remove('visible');
                 simpleTextEl.classList.remove('active');
             } else if (config.titre_active && titreActive) {
-                // Titre déjà actif, juste mettre à jour le texte si changé
                 if (verseBody.innerHTML !== config.titre_message) {
                     verseBody.innerHTML = config.titre_message || "MESSAGE";
                 }
             }
-            // Si titre_active est false et titreActive est false, ne rien faire (laisser ProPresenter contrôler)
         }
 
         function afficherTitre(titre) {
@@ -450,7 +441,6 @@
                     const isInactive = timeSinceLastUpdate > INACTIVITY_THRESHOLD;
                     
                     if (wasVersetMode && !isInactive) {
-                        // FADE uniquement
                         console.log('[Animation] FADE');
                         textContent.classList.add('fade-out');
                         refBadge.style.opacity = "0";
@@ -462,7 +452,6 @@
                             refBadge.style.opacity = "1";
                         }, 600);
                     } else {
-                        // SLIDE-UP
                         console.log('[Animation] SLIDE-UP');
                         simpleTextEl.classList.remove("active");
                         ltContainer.classList.remove("visible");
@@ -475,7 +464,6 @@
                         currentMode = 'verset';
                     }
                 } else {
-                    // TEXTE SIMPLE
                     ltContainer.classList.remove("visible");
                     simpleTextEl.innerHTML = text.replace(/\n/g, "<br>");
                     simpleTextEl.classList.add("active");
@@ -523,17 +511,14 @@
 
         // ==================== DÉMARRAGE ====================
         window.addEventListener('DOMContentLoaded', () => {
-            console.log('[Display] v4.0 - Démarrage');
+            console.log('[Display] v4.2 - Démarrage');
             loadConfig();
             startPolling();
-            
-            // Recharger config toutes les 2 secondes
             setInterval(loadConfig, 2000);
         });
 
         // ==================== RACCOURCIS CLAVIER ====================
         document.addEventListener('keydown', (e) => {
-            // Ctrl+F ou Cmd+F pour plein écran
             if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
                 e.preventDefault();
                 if (!document.fullscreenElement) {
@@ -543,7 +528,6 @@
                 }
             }
             
-            // Échap pour sortir du plein écran
             if (e.key === 'Escape' && document.fullscreenElement) {
                 document.exitFullscreen();
             }
