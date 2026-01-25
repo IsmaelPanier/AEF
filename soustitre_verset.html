@@ -3,13 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Affichage Régie Dissocié - ProPresenter</title>
+    <title>Affichage Régie - ProPresenter</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700;800&display=swap');
 
         :root {
             --couleur-principale: #802B36;
-            --taille-paroles: 30px; 
+            --taille-texte-normal: 35px;
         }
 
         * {
@@ -26,21 +26,26 @@
             overflow: hidden;
             display: flex;
             flex-direction: column;
-            justify-content: flex-end; 
+            justify-content: flex-end; /* Position par défaut en bas */
             align-items: center;
             padding-bottom: 50px;
         }
 
-        /* --- STYLE DES PAROLES (TEXTE NORMAL : 30px) --- */
+        /* Classes de positionnement (pilotées par le localStorage) */
+        body.position-haut { justify-content: flex-start; padding-top: 50px; padding-bottom: 0; }
+        body.position-centre { justify-content: center; padding-top: 0; padding-bottom: 0; }
+        body.position-bas { justify-content: flex-end; padding-top: 0; padding-bottom: 50px; }
+
+        /* --- STYLE DES SOUS-TITRES (TEXTE SIMPLE) --- */
         #simple-text {
             color: white;
-            font-size: var(--taille-paroles);
-            font-weight: 700;
+            font-size: var(--taille-texte-normal);
+            font-weight: bold;
             text-align: center;
             max-width: 90%;
             line-height: 1.2;
             text-shadow: 2px 2px 4px rgba(0,0,0,1);
-            padding: 10px 20px;
+            padding: 15px 30px;
             transition: opacity 0.3s ease;
             opacity: 0;
             display: none;
@@ -51,7 +56,7 @@
             display: block;
         }
 
-        /* --- STYLE DU LAYOUT VERSET (CORPS : 50px) --- */
+        /* --- STYLE DU LAYOUT VERSET --- */
         .lt-wrapper {
             width: 1400px;
             max-width: 90%;
@@ -115,18 +120,17 @@
         }
 
         .verse-text {
-            /* TAILLE DU VERSET fixée à 50px */
-            font-size: 50px; 
+            font-size: 1.35rem;
             font-weight: 700;
-            line-height: 1.3;
+            line-height: 1.4;
             text-transform: uppercase;
         }
 
         .verse-text sup {
-            font-size: 0.6em;
+            font-size: 0.7em;
             font-weight: 800;
             opacity: 0.8;
-            margin-right: 5px;
+            margin-right: 3px;
         }
 
         .content-anim {
@@ -139,20 +143,26 @@
             transform: translateX(20px);
         }
 
+        /* Indicateur de statut discret (petit point en haut à droite) */
         .status-dot {
             position: fixed;
             top: 10px; right: 10px;
-            width: 6px; height: 6px;
+            width: 8px; height: 8px;
             border-radius: 50%;
             background: red;
-            opacity: 0.2;
+            opacity: 0.5;
+            z-index: 100;
         }
-        .status-dot.connected { opacity: 0; }
+        .status-dot.connected { background: lime; opacity: 0; } /* Masqué si connecté */
+
+        body.hidden-display { display: none !important; }
     </style>
 </head>
 <body>
     <div class="status-dot" id="statusDot"></div>
+
     <div id="simple-text"></div>
+
     <div class="lt-wrapper" id="ltContainer">
         <div class="church-badge" id="refBadge"></div>
         <div class="main-card">
@@ -164,7 +174,7 @@
     </div>
 
 <script>
-// Base de données Bible pour détection
+// --- CONFIGURATION ---
 const LIVRES_BIBLE=[{fr:"Genèse",en:"Genesis",abrev:["Gen","Gn","Ge"]},{fr:"Exode",en:"Exodus",abrev:["Exo","Ex","Exod"]},{fr:"Lévitique",en:"Leviticus",abrev:["Lév","Lv","Lev"]},{fr:"Nombres",en:"Numbers",abrev:["Nom","Nb","Num"]},{fr:"Deutéronome",en:"Deuteronomy",abrev:["Deut","Dt","Deu"]},{fr:"Josué",en:"Joshua",abrev:["Jos","Josh"]},{fr:"Juges",en:"Judges",abrev:["Jug","Jg","Judg"]},{fr:"Ruth",en:"Ruth",abrev:["Rt","Ru"]},{fr:"1 Samuel",en:"1 Samuel",abrev:["1 Sam","1 S","1Sam","1S"]},{fr:"2 Samuel",en:"2 Samuel",abrev:["2 Sam","2 S","2Sam","2S"]},{fr:"1 Rois",en:"1 Kings",abrev:["1 Ro","1 R","1Ro","1R","1 Ki"]},{fr:"2 Rois",en:"2 Kings",abrev:["2 Ro","2 R","2Ro","2R","2 Ki"]},{fr:"1 Chroniques",en:"1 Chronicles",abrev:["1 Chr","1 Ch","1Chr","1Ch"]},{fr:"2 Chroniques",en:"2 Chronicles",abrev:["2 Chr","2 Ch","2Chr","2Ch"]},{fr:"Esdras",en:"Ezra",abrev:["Esd","Ezr"]},{fr:"Néhémie",en:"Nehemiah",abrev:["Néh","Neh","Ne"]},{fr:"Esther",en:"Esther",abrev:["Est","Esth","Es"]},{fr:"Job",en:"Job",abrev:["Jb"]},{fr:"Psaumes",en:"Psalms",abrev:["Ps","Psa","Psaume"]},{fr:"Proverbes",en:"Proverbs",abrev:["Prov","Pr","Pro"]},{fr:"Ecclésiaste",en:"Ecclesiastes",abrev:["Ecc","Ec","Eccl"]},{fr:"Cantique des Cantiques",en:"Song of Solomon",abrev:["Cant","Ct","Song","SOS"]},{fr:"Ésaïe",en:"Isaiah",abrev:["Ésa","És","Isa","Is"]},{fr:"Jérémie",en:"Jeremiah",abrev:["Jér","Jr","Jer"]},{fr:"Lamentations",en:"Lamentations",abrev:["Lam","La"]},{fr:"Ézéchiel",en:"Ezekiel",abrev:["Ézé","Éz","Eze","Ezek"]},{fr:"Daniel",en:"Daniel",abrev:["Dan","Da","Dn"]},{fr:"Osée",en:"Hosea",abrev:["Os","Hos"]},{fr:"Joël",en:"Joel",abrev:["Joe","Jl"]},{fr:"Amos",en:"Amos",abrev:["Am"]},{fr:"Abdias",en:"Obadiah",abrev:["Abd","Ob","Oba"]},{fr:"Jonas",en:"Jonah",abrev:["Jon","Jnh"]},{fr:"Michée",en:"Micah",abrev:["Mic","Mi"]},{fr:"Nahum",en:"Nahum",abrev:["Nah","Na"]},{fr:"Habakuk",en:"Habakkuk",abrev:["Hab","Ha"]},{fr:"Sophonie",en:"Zephaniah",abrev:["Soph","So","Zep"]},{fr:"Aggée",en:"Haggai",abrev:["Agg","Ag","Hag"]},{fr:"Zacharie",en:"Zechariah",abrev:["Zach","Za","Zec"]},{fr:"Malachie",en:"Malachi",abrev:["Mal","Ml"]},{fr:"Matthieu",en:"Matthew",abrev:["Matt","Mt","Mat"]},{fr:"Marc",en:"Mark",abrev:["Mc","Mr","Mar"]},{fr:"Luc",en:"Luke",abrev:["Lc","Lk","Lu"]},{fr:"Jean",en:"John",abrev:["Jn","Joh"]},{fr:"Actes",en:"Acts",abrev:["Act","Ac"]},{fr:"Romains",en:"Romans",abrev:["Rom","Ro","Rm"]},{fr:"1 Corinthiens",en:"1 Corinthians",abrev:["1 Cor","1 Co","1Cor","1Co"]},{fr:"2 Corinthiens",en:"2 Corinthians",abrev:["2 Cor","2 Co","2Cor","2Co"]},{fr:"Galates",en:"Galatians",abrev:["Gal","Ga"]},{fr:"Éphésiens",en:"Ephesians",abrev:["Éph","Ép","Eph","Ep"]},{fr:"Philippiens",en:"Philippians",abrev:["Phil","Ph","Php"]},{fr:"Colossiens",en:"Colossians",abrev:["Col"]},{fr:"1 Thessaloniciens",en:"1 Thessalonians",abrev:["1 Thess","1 Th","1Thess","1Th"]},{fr:"2 Thessaloniciens",en:"2 Thessalonians",abrev:["2 Thess","2 th","2Thess","2Th"]},{fr:"1 Timothée",en:"1 Timothy",abrev:["1 Tim","1 Ti","1Tim","1Ti"]},{fr:"2 Timothée",en:"2 Timothy",abrev:["2 Tim","2 Ti","2Tim","2Ti"]},{fr:"Tite",en:"Titus",abrev:["Tit","Tt"]},{fr:"Philémon",en:"Philemon",abrev:["Philém","Phm","Phlm"]},{fr:"Hébreux",en:"Hebrews",abrev:["Héb","Hé","Heb","He"]},{fr:"Jacques",en:"James",abrev:["Jacq","Jac","Jas","Jm"]},{fr:"1 Pierre",en:"1 Peter",abrev:["1 Pi","1 P","1Pi","1P","1 Pe"]},{fr:"2 Pierre",en:"2 Peter",abrev:["2 Pi","2 P","2Pi","2P","2 Pe"]},{fr:"1 Jean",en:"1 John",abrev:["1 Jn","1 J","1Jn","1J"]},{fr:"2 Jean",en:"2 John",abrev:["2 Jn","2 J","2Jn","2J"]},{fr:"3 Jean",en:"3 John",abrev:["3 Jn","3 J","3Jn","3J"]},{fr:"Jude",en:"Jude",abrev:["Jud","Jd"]},{fr:"Apocalypse",en:"Revelation",abrev:["Apoc","Ap","Rev"]}];
 
 let API_BASE = localStorage.getItem('propresenter_api') || "http://192.168.1.22:49196";
@@ -180,6 +190,7 @@ let currentMode = null;
 let lastUpdateTime = Date.now();
 const INACTIVITY_THRESHOLD = 20000;
 
+// --- LOGIQUE DE DETECTION ---
 function estReference(ligne){
     if(!ligne) return false;
     const regexReference = /^(.+?)\s+(\d+):(\d+)(-\d+)?$/;
@@ -209,6 +220,7 @@ function formaterNumeroVerset(texte){
     return match ? `<sup>${match[1]}</sup>${match[2]}` : texte;
 }
 
+// --- MISE À JOUR DE L'AFFICHAGE ---
 function updateDisplay(text){
     if(text === lastText) return;
     lastText = text;
@@ -257,6 +269,17 @@ async function poll(){
     }
 }
 
+// --- SYNC VIA LOCAL STORAGE (Pour contrôler depuis une autre fenêtre) ---
+window.addEventListener('storage', (e) => {
+    if(e.key === 'couleur_selectionnee') document.documentElement.style.setProperty('--couleur-principale', e.newValue);
+    if(e.key === 'taille_texte') document.documentElement.style.setProperty('--taille-texte-normal', e.newValue + 'px');
+    if(e.key === 'position_selectionnee') {
+        body.className = body.className.replace(/position-\w+/, '');
+        body.classList.add('position-' + e.newValue);
+    }
+});
+
+// Init
 setInterval(poll, 500);
 </script>
 </body>
