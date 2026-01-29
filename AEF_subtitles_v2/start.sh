@@ -20,11 +20,12 @@ echo "Node.js: $(node --version)"
 # Installer dépendances si nécessaire
 if [ ! -d "node_modules" ]; then
     echo "Installation des dépendances..."
-    npm install
+    npm install -y
     echo ""
 fi
 
 # Démarrer le serveur
 echo "Démarrage du serveur..."
 echo ""
-node server.js
+npm start
+

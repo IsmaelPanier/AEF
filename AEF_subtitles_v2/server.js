@@ -218,6 +218,6 @@ server.listen(PORT, '0.0.0.0', () => {
         }
     }
     console.log('');
-    console.log('⏳ Attente connexion ProPresenter...');
+    console.log(' Attente connexion ProPresenter...');
     console.log('========================================');
 });

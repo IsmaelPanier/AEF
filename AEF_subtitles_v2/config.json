@@ -1,9 +1,9 @@
 {
   "couleur": "#A5763A",
   "position": "bas",
-  "taille": "50",
+  "taille": "35",
   "titre_message": "",
   "titre_active": false,
   "is_hidden": false,
-  "propresenter_api": "http://192.168.1.22:49196"
+  "propresenter_api": "http://172.20.10.3:51586"
 }
