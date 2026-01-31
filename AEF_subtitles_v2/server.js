@@ -18,8 +18,11 @@ const DEFAULT_CONFIG = {
     couleur: '#802B36',
     position: 'bas',
     taille: '35',
+    police: 'Montserrat',
     titre_message: '',
     titre_active: false,
+    titre_timer: 10,
+    titre_timer_active: false,
     is_hidden: false,
     propresenter_api: 'http://127.0.0.1:49196'
 };
@@ -202,7 +205,7 @@ server.listen(PORT, '0.0.0.0', () => {
     console.log('   Configuration: http://localhost:' + PORT + '/config.html');
     console.log('   Affichage OBS: http://localhost:' + PORT + '/display.html');
     console.log('');
-    console.log('API ProPresenter:');
+    console.log('🎮 API ProPresenter:');
     console.log('   ' + currentConfig.propresenter_api);
     console.log('');
     
@@ -218,6 +221,6 @@ server.listen(PORT, '0.0.0.0', () => {
         }
     }
     console.log('');
-    console.log(' Attente connexion ProPresenter...');
+    console.log('⏳ Attente connexion ProPresenter...');
     console.log('========================================');
 });

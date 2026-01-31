@@ -3,15 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Affichage - Régie AEF v4.2</title>
+    <title>Affichage - Régie AEF v4.4</title>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700;800&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700;800&family=Open+Sans:wght@400;700;800&family=Roboto:wght@400;700;900&family=Lato:wght@400;700;900&family=Poppins:wght@400;700;800&family=Raleway:wght@400;700;800&family=Oswald:wght@400;700&family=Playfair+Display:wght@400;700;900&family=Merriweather:wght@400;700;900&family=Lora:wght@400;700&family=Ubuntu:wght@400;700&family=Nunito:wght@400;700;800&family=PT+Sans:wght@400;700&family=Inter:wght@400;700;800&family=Quicksand:wght@400;700&display=swap');
 
         :root {
             --couleur-principale: #802B36;
             --position-texte: flex-end;
             --taille-texte-normal: 35px;
             --taille-verset: 1.35rem;
+            --police-principale: 'Montserrat', sans-serif;
         }
 
         * {
@@ -22,7 +23,7 @@
 
         body {
             background: transparent;
-            font-family: 'Montserrat', sans-serif;
+            font-family: var(--police-principale);
             height: 100vh;
             width: 100vw;
             overflow: hidden;
@@ -58,7 +59,7 @@
             text-align: center;
             max-width: 90%;
             line-height: 1.2;
-            font-family: 'Montserrat', sans-serif;
+            font-family: var(--police-principale);
             text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
             padding: 15px 30px;
             transition: opacity 0.8s ease;
@@ -71,7 +72,6 @@
             display: block;
         }
 
-        /* Mode caché avec fondu */
         body.hidden-display #simple-text.active {
             opacity: 0;
         }
@@ -94,7 +94,6 @@
             display: block;
         }
 
-        /* Mode caché avec fondu pour lower third */
         body.hidden-display .lt-wrapper.visible {
             opacity: 0;
             transition: opacity 0.8s ease;
@@ -114,7 +113,7 @@
             left: 60px;
             z-index: 10;
             box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-            font-family: 'Montserrat', sans-serif;
+            font-family: var(--police-principale);
             transition: opacity 0.3s ease;
         }
 
@@ -166,7 +165,7 @@
             font-weight: 700;
             line-height: 1.4;
             text-transform: uppercase;
-            font-family: 'Montserrat', sans-serif;
+            font-family: var(--police-principale);
         }
 
         .verse-text sup {
@@ -176,7 +175,6 @@
             margin-right: 3px;
         }
 
-        /* Indicateur de statut */
         .status-indicator {
             position: fixed;
             top: 10px;
@@ -188,6 +186,7 @@
             box-shadow: 0 0 10px rgba(255, 0, 0, 0.5);
             z-index: 1500;
             transition: all 0.3s ease;
+            display: none; /* MASQUÉ COMPLÈTEMENT */
         }
 
         .status-indicator.connected {
@@ -213,13 +212,10 @@
     </style>
 </head>
 <body class="position-bas">
-    <!-- Indicateur de statut -->
     <div class="status-indicator connecting" id="statusIndicator"></div>
 
-    <!-- Affichage texte simple -->
     <div id="simple-text"></div>
 
-    <!-- Affichage verset/message (Lower Third) -->
     <div class="lt-wrapper" id="ltContainer">
         <div class="church-badge" id="refBadge">Jean 3:16</div>
         <div class="main-card">
@@ -231,8 +227,10 @@
     </div>
 
     <script>
+        // ==================== CONFIGURATION ====================
         const CONFIG_API_URL = window.location.protocol + '//' + window.location.host + '/api/config';
         
+        // ==================== TABLEAU DES LIVRES DE LA BIBLE ====================
         const LIVRES_BIBLE = [
             { fr: "Genèse", en: "Genesis", abrev: ["Gen", "Gn", "Ge"] },
             { fr: "Exode", en: "Exodus", abrev: ["Exo", "Ex", "Exod"] },
@@ -282,7 +280,7 @@
             { fr: "1 Corinthiens", en: "1 Corinthians", abrev: ["1 Cor", "1 Co", "1Cor", "1Co"] },
             { fr: "2 Corinthiens", en: "2 Corinthians", abrev: ["2 Cor", "2 Co", "2Cor", "2Co"] },
             { fr: "Galates", en: "Galatians", abrev: ["Gal", "Ga"] },
-            { fr: "Ephésiens", en: "Ephesians", abrev: ["Éph", "Ép", "Eph", "Ep", "Ephésiens", "Ephesiens"] },
+            { fr: "Éphésiens", en: "Ephesians", abrev: ["Éph", "Ép", "Eph", "Ep", "Ephésiens", "Ephesiens"] },
             { fr: "Philippiens", en: "Philippians", abrev: ["Phil", "Ph", "Php"] },
             { fr: "Colossiens", en: "Colossians", abrev: ["Col"] },
             { fr: "1 Thessaloniciens", en: "1 Thessalonians", abrev: ["1 Thess", "1 Th", "1Thess", "1Th"] },
@@ -360,7 +358,11 @@
         let pollInterval = null;
         let currentMode = null;
         let titreActive = false;
+        let titreTimer = 10; // Durée en secondes
+        let titreTimerActive = false; // Timer actif ou non
+        let titreTimeout = null; // Timer pour masquer le titre
         let statusHideTimeout = null;
+        let isPresentationActive = true; // NOUVEAU : Indique si présentation active
         const INACTIVITY_THRESHOLD = 20000;
         let lastUpdateTime = Date.now();
 
@@ -381,21 +383,32 @@
             
             document.documentElement.style.setProperty('--couleur-principale', config.couleur);
             document.documentElement.style.setProperty('--taille-texte-normal', config.taille + 'px');
+            
+            if (config.police) {
+                document.documentElement.style.setProperty('--police-principale', `'${config.police}', sans-serif`);
+                console.log('[CONFIG] Police:', config.police);
+            }
+            
             document.body.className = 'position-' + config.position;
             
-            // Mode masqué avec fondu
             if (config.is_hidden) {
                 document.body.classList.add('hidden-display');
             } else {
                 document.body.classList.remove('hidden-display');
             }
             
-            // Gestion du titre
+            // Timer pour le titre
+            titreTimer = config.titre_timer || 10;
+            titreTimerActive = config.titre_timer_active || false;
+            console.log('[CONFIG] Timer titre:', titreTimer, 'secondes', titreTimerActive ? '(actif)' : '(inactif)');
+            
+            // Gestion du titre avec timer
             if (config.titre_active && !titreActive) {
                 titreActive = true;
                 afficherTitre(config.titre_message);
             } else if (!config.titre_active && titreActive) {
                 titreActive = false;
+                clearTitreTimer();
                 currentMode = null;
                 ltContainer.classList.remove('visible');
                 simpleTextEl.classList.remove('active');
@@ -414,28 +427,88 @@
             void ltContainer.offsetWidth;
             ltContainer.classList.add("visible");
             currentMode = 'message';
+            
+            // Démarrer le timer de masquage automatique
+            startTitreTimer();
+        }
+
+        function startTitreTimer() {
+            // Annuler le timer précédent si existant
+            clearTitreTimer();
+            
+            // Si timer désactivé, ne pas masquer automatiquement
+            if (!titreTimerActive) {
+                console.log('[TIMER] Timer désactivé - Titre permanent');
+                return;
+            }
+            
+            console.log('[TIMER] Démarrage timer:', titreTimer, 'secondes');
+            
+            titreTimeout = setTimeout(async () => {
+                console.log('[TIMER] Masquage automatique du titre');
+                titreActive = false;
+                currentMode = null;
+                ltContainer.classList.remove('visible');
+                simpleTextEl.classList.remove('active');
+                
+                // IMPORTANT : Désactiver le titre dans la config serveur
+                try {
+                    const response = await fetch(CONFIG_API_URL);
+                    const config = await response.json();
+                    config.titre_active = false;
+                    
+                    await fetch(CONFIG_API_URL, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(config)
+                    });
+                    
+                    console.log('[TIMER] Config mise à jour - titre_active = false');
+                } catch (err) {
+                    console.error('[TIMER] Erreur mise à jour config:', err);
+                }
+            }, titreTimer * 1000);
+        }
+
+        function clearTitreTimer() {
+            if (titreTimeout) {
+                clearTimeout(titreTimeout);
+                titreTimeout = null;
+                console.log('[TIMER] Timer annulé');
+            }
         }
 
         // ==================== AFFICHAGE ====================
         function updateDisplay(text) {
             if (titreActive) return;
             
-            // Si texte identique, ne rien faire
+            // NOUVEAU : Si aucune présentation active, masquer tout
+            if (!isPresentationActive) {
+                if (simpleTextEl.classList.contains('active') || ltContainer.classList.contains('visible')) {
+                    simpleTextEl.classList.remove("active");
+                    ltContainer.classList.remove("visible");
+                    currentMode = null;
+                    console.log('[Display] Présentation inactive - Masquage forcé');
+                }
+                return;
+            }
+            
             if (text === lastText) return;
             
             lastText = text;
             const now = Date.now();
             const timeSinceLastUpdate = now - lastUpdateTime;
 
-            // Si texte vide, masquer tout
-            if (text.trim() === "") {
+            // Si texte vide OU patterns de masquage spéciaux
+            const textTrimmed = text.trim();
+            if (textTrimmed === "" || textTrimmed === "---" || textTrimmed === "CLEAR" || textTrimmed === "MASQUER") {
                 simpleTextEl.classList.remove("active");
                 ltContainer.classList.remove("visible");
                 currentMode = null;
+                console.log('[Display] Masquage détecté:', textTrimmed || '(vide)');
                 return;
             }
 
-            // Détecter si c'est un verset
             const verset = detecterVerset(text);
             
             if (verset) {
@@ -443,7 +516,6 @@
                 const isInactive = timeSinceLastUpdate > INACTIVITY_THRESHOLD;
                 
                 if (wasVersetMode && !isInactive) {
-                    // FADE pour transition rapide
                     console.log('[Animation] FADE');
                     textContent.classList.add('fade-out');
                     refBadge.style.opacity = "0";
@@ -455,7 +527,6 @@
                         refBadge.style.opacity = "1";
                     }, 600);
                 } else {
-                    // SLIDE-UP pour nouvelle apparition
                     console.log('[Animation] SLIDE-UP');
                     simpleTextEl.classList.remove("active");
                     ltContainer.classList.remove("visible");
@@ -468,7 +539,6 @@
                     currentMode = 'verset';
                 }
             } else {
-                // Texte simple
                 ltContainer.classList.remove("visible");
                 simpleTextEl.innerHTML = text.replace(/\n/g, "<br>");
                 simpleTextEl.classList.add("active");
@@ -491,8 +561,34 @@
         }
 
         // ==================== POLLING PROPRESENTER ====================
+        async function checkPresentationActive() {
+            try {
+                const response = await fetch(`${API_BASE}/v1/presentation/active`);
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+                const data = await response.json();
+                
+                // Si presentation est null, aucune présentation active
+                const wasActive = isPresentationActive;
+                isPresentationActive = (data.presentation !== null);
+                
+                if (wasActive !== isPresentationActive) {
+                    console.log('[Presentation]', isPresentationActive ? 'ACTIVE' : 'INACTIVE');
+                }
+            } catch (err) {
+                console.error('[Presentation] Erreur vérification:', err);
+                // En cas d'erreur, considérer comme active pour éviter masquage intempestif
+                isPresentationActive = true;
+            }
+        }
+        
         async function pollUpdate() {
             try {
+                // Vérifier si une présentation est active
+                await checkPresentationActive();
+                
+                // Récupérer le slide actuel
                 const response = await fetch(`${API_BASE}/v1/status/slide`);
                 if (!response.ok) {
                     throw new Error(`HTTP ${response.status}`);
@@ -515,7 +611,7 @@
 
         // ==================== DÉMARRAGE ====================
         window.addEventListener('DOMContentLoaded', () => {
-            console.log('[Display] v4.2 - Démarrage');
+            console.log('[Display] v4.4 - Démarrage');
             loadConfig();
             startPolling();
             setInterval(loadConfig, 2000);

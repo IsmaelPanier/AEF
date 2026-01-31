@@ -53,7 +53,8 @@
         }
         
         input[type="text"],
-        input[type="number"] {
+        input[type="number"],
+        select {
             width: 100%;
             padding: 10px;
             border: 1px solid #ddd;
@@ -62,18 +63,22 @@
         }
         
         input[type="text"]:focus,
-        input[type="number"]:focus {
+        input[type="number"]:focus,
+        select:focus {
             outline: none;
             border-color: #4a90e2;
+        }
+        
+        input:disabled {
+            background: #f5f5f5;
+            color: #888;
+            cursor: not-allowed;
         }
         
         .input-group {
             display: flex;
             gap: 10px;
-        }
-        
-        .input-group input {
-            flex: 1;
+            align-items: center;
         }
         
         .input-suffix {
@@ -93,6 +98,45 @@
             border-radius: 0 4px 4px 0;
             font-size: 14px;
             color: #666;
+        }
+        
+        .input-with-button {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        
+        .input-with-button .input-suffix {
+            flex: 1;
+        }
+        
+        .input-with-button input[type="text"] {
+            flex: 1;
+        }
+        
+        .edit-button {
+            padding: 10px 20px;
+            background: #4a90e2;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.3s;
+            white-space: nowrap;
+        }
+        
+        .edit-button:hover {
+            background: #357abd;
+        }
+        
+        .edit-button.save-mode {
+            background: #28a745;
+        }
+        
+        .edit-button.save-mode:hover {
+            background: #218838;
         }
         
         .color-grid {
@@ -275,6 +319,43 @@
             font-size: 13px;
             word-break: break-all;
         }
+        
+        .qrcode-container {
+            text-align: center;
+            margin-top: 15px;
+            padding: 15px;
+            background: white;
+            border-radius: 4px;
+        }
+        
+        #qrcode {
+            display: inline-block;
+            padding: 10px;
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        
+        .qrcode-label {
+            font-size: 12px;
+            color: #666;
+            margin-top: 10px;
+        }
+        
+        .timer-group {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            margin-top: 10px;
+        }
+        
+        .timer-group input {
+            width: 80px;
+        }
+        
+        .timer-group span {
+            color: #666;
+        }
     </style>
 </head>
 <body>
@@ -282,23 +363,39 @@
         <h1>Configuration AEF</h1>
         <div class="subtitle">Régie virtuelle sous-titres</div>
         
-        <!-- API ProPresenter -->
+        <!-- API ProPresenter VERROUILLÉE -->
         <div class="section">
-            <label> API ProPresenter</label>
-            <div class="input-group">
-                <input type="text" id="propresenter_ip" placeholder="10.0.0.9" style="flex: 2;">
-                <input type="text" id="propresenter_port" placeholder="49196" style="flex: 1;">
+            <label>🎮 API ProPresenter</label>
+            <div class="input-with-button">
+                <input type="text" id="propresenter_ip" placeholder="10.0.0.9" style="flex: 2;" disabled>
+                <input type="text" id="propresenter_port" placeholder="49196" style="flex: 1;" disabled>
+                <button class="edit-button" id="editButtonAPI" onclick="toggleEditModeAPI()">✏️ Modifier</button>
             </div>
         </div>
         
-        <!-- Message de prédication -->
+        <!-- Message de prédication avec TIMER OPTIONNEL -->
         <div class="section">
             <label>📖 Titre du message de prédication</label>
             <input type="text" id="titre_message" placeholder="Ex: Le pardon de Dieu">
+            
             <div class="checkbox-field" onclick="toggleTitre()" style="margin-top: 10px;">
                 <div class="checkbox-custom" id="checkboxTitre"></div>
                 <span>Afficher le titre du message</span>
             </div>
+            
+            <div class="checkbox-field" onclick="toggleTimerActive()" style="margin-top: 10px;">
+                <div class="checkbox-custom" id="checkboxTimer"></div>
+                <span>Masquer automatiquement après</span>
+            </div>
+            
+            <div class="timer-group" id="timerGroup" style="display: none;">
+                <input type="number" id="titre_timer" min="1" max="300" value="10" onchange="updateTimer()">
+                <span>secondes</span>
+            </div>
+            
+            <button class="save-button" onclick="masquerTitreManuel()" style="margin-top: 10px; background: #dc3545;">
+                👁️ Masquer le titre maintenant
+            </button>
         </div>
         
         <!-- Couleur -->
@@ -315,7 +412,7 @@
         
         <!-- Position -->
         <div class="section">
-            <label> Position du texte à l'écran</label>
+            <label>📍 Position du texte à l'écran</label>
             <div class="button-group">
                 <div class="btn-option" data-position="haut" onclick="selectPosition('haut')">Haut</div>
                 <div class="btn-option" data-position="centre" onclick="selectPosition('centre')">Centre</div>
@@ -323,18 +420,38 @@
             </div>
         </div>
         
-        <!-- Taille personnalisée -->
+        <!-- Police -->
         <div class="section">
-            <label> Taille du texte (en pixels)</label>
-            <div class="input-suffix">
-                <input type="number" id="taille_text" min="10" max="200" value="35" oninput="previewTaille()">
-                <span>px</span>
+            <label>✍️ Police de caractères</label>
+            <select id="police_select" onchange="selectPolice()">
+                <option value="Montserrat">Montserrat (par défaut)</option>
+                <option value="Open Sans">Open Sans</option>
+                <option value="Roboto">Roboto</option>
+                <option value="Lato">Lato</option>
+                <option value="Poppins">Poppins</option>
+                <option value="Raleway">Raleway</option>
+                <option value="Ubuntu">Ubuntu</option>
+                <option value="Playfair Display">Playfair Display (élégante)</option>
+                <option value="Merriweather">Merriweather (lecture)</option>
+                <option value="Nunito">Nunito (arrondie)</option>
+            </select>
+        </div>
+        
+        <!-- Taille avec bouton Modifier/Enregistrer -->
+        <div class="section">
+            <label>📏 Taille du texte (en pixels)</label>
+            <div class="input-with-button">
+                <div class="input-suffix">
+                    <input type="number" id="taille_text" min="10" max="200" value="35" disabled>
+                    <span>px</span>
+                </div>
+                <button class="edit-button" id="editButton" onclick="toggleEditMode()">✏️ Modifier</button>
             </div>
         </div>
         
         <!-- Masquer affichage avec action immédiate -->
         <div class="section">
-            <label> Visibilité de l'affichage</label>
+            <label>👁️ Visibilité de l'affichage</label>
             <div class="checkbox-field" onclick="toggleHiddenImmediate()">
                 <div class="checkbox-custom" id="checkboxHidden"></div>
                 <span>Masquer l'affichage (mode caché)</span>
@@ -345,15 +462,18 @@
         <button class="save-button" onclick="saveConfig()">💾 Sauvegarder la configuration</button>
         <div class="status-message" id="statusMessage"></div>
         
-        <!-- Info avec bouton copier -->
+        <!-- QR Code pour CONFIG.HTML (contrôle smartphone) -->
         <div class="info">
-            <strong> URL pour OBS/Streamlabs:</strong>
-            <div class="url-display">
-                <code id="obsUrl">http://localhost:3000/display.html</code>
-                <button class="copy-button" onclick="copyOBSUrl()">📋 Copier</button>
+            <strong>📱 Contrôler depuis smartphone :</strong>
+            <div class="qrcode-container">
+                <div id="qrcode"></div>
+                <div class="qrcode-label">Scanner pour ouvrir cette page de configuration sur votre smartphone</div>
             </div>
         </div>
     </div>
+
+    <!-- QR Code Library -->
+    <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
 
     <script>
         const API_URL = window.location.protocol + '//' + window.location.host + '/api/config';
@@ -362,13 +482,20 @@
             couleur: '#802B36',
             position: 'bas',
             taille: '35',
+            police: 'Montserrat',
             titre_message: '',
             titre_active: false,
+            titre_timer: 10,
+            titre_timer_active: false,
             is_hidden: false,
             propresenter_api: 'http://127.0.0.1:49196'
         };
         
-        // Charger config au démarrage
+        let isEditMode = false;
+        let isEditModeAPI = false;
+        let qrcode = null;
+        
+        // ==================== CHARGEMENT CONFIG ====================
         async function loadConfig() {
             try {
                 const response = await fetch(API_URL);
@@ -382,7 +509,6 @@
             }
         }
         
-        // Appliquer config à l'interface
         function applyConfig() {
             // Parser l'URL API ProPresenter
             try {
@@ -390,13 +516,14 @@
                 document.getElementById('propresenter_ip').value = url.hostname;
                 document.getElementById('propresenter_port').value = url.port || '49196';
             } catch (e) {
-                // Si parsing échoue, valeurs par défaut
                 document.getElementById('propresenter_ip').value = '127.0.0.1';
                 document.getElementById('propresenter_port').value = '49196';
             }
             
             document.getElementById('titre_message').value = config.titre_message;
             document.getElementById('taille_text').value = config.taille;
+            document.getElementById('police_select').value = config.police || 'Montserrat';
+            document.getElementById('titre_timer').value = config.titre_timer || 10;
             
             // Couleur
             document.querySelectorAll('.color-option').forEach(el => {
@@ -421,39 +548,112 @@
                 document.getElementById('checkboxTitre').classList.remove('checked');
             }
             
+            if (config.titre_timer_active) {
+                document.getElementById('checkboxTimer').classList.add('checked');
+                document.getElementById('timerGroup').style.display = 'flex';
+            } else {
+                document.getElementById('checkboxTimer').classList.remove('checked');
+                document.getElementById('timerGroup').style.display = 'none';
+            }
+            
             if (config.is_hidden) {
                 document.getElementById('checkboxHidden').classList.add('checked');
             } else {
                 document.getElementById('checkboxHidden').classList.remove('checked');
             }
             
-            // URL OBS (dynamique)
-            updateOBSUrl();
+            // QR Code pour CONFIG (cette page)
+            generateQRCode();
         }
         
-        function updateOBSUrl() {
-            const ip = document.getElementById('propresenter_ip').value || 'localhost';
-            const port = window.location.port || '3000';
-            document.getElementById('obsUrl').textContent = `http://${ip}:${port}/display.html`;
+        function generateQRCode() {
+            const configUrl = window.location.href;
+            const qrcodeDiv = document.getElementById('qrcode');
+            qrcodeDiv.innerHTML = '';
+            
+            qrcode = new QRCode(qrcodeDiv, {
+                text: configUrl,
+                width: 150,
+                height: 150,
+                colorDark: "#000000",
+                colorLight: "#ffffff",
+                correctLevel: QRCode.CorrectLevel.H
+            });
         }
         
-        // Preview taille en temps réel
-        function previewTaille() {
-            const taille = document.getElementById('taille_text').value;
-            if (taille && taille > 0) {
-                config.taille = taille;
-                // Envoyer immédiatement au serveur pour aperçu
+        // ==================== MODE ÉDITION API ====================
+        function toggleEditModeAPI() {
+            const ipInput = document.getElementById('propresenter_ip');
+            const portInput = document.getElementById('propresenter_port');
+            const button = document.getElementById('editButtonAPI');
+            
+            if (!isEditModeAPI) {
+                // Activer mode édition
+                ipInput.disabled = false;
+                portInput.disabled = false;
+                ipInput.focus();
+                button.textContent = '💾 Enregistrer';
+                button.classList.add('save-mode');
+                isEditModeAPI = true;
+            } else {
+                // Enregistrer et verrouiller
+                ipInput.disabled = true;
+                portInput.disabled = true;
+                button.textContent = '✏️ Modifier';
+                button.classList.remove('save-mode');
+                isEditModeAPI = false;
+                
+                // Sauvegarder automatiquement
+                const ip = ipInput.value.trim();
+                const port = portInput.value.trim();
+                config.propresenter_api = `http://${ip}:${port}`;
                 sendConfigImmediate();
+                showStatus('✅ API ProPresenter enregistrée : ' + config.propresenter_api, 'success');
             }
         }
         
-        // Sauvegarder config
+        // ==================== MODE ÉDITION TAILLE ====================
+        function toggleEditMode() {
+            const input = document.getElementById('taille_text');
+            const button = document.getElementById('editButton');
+            
+            if (!isEditMode) {
+                // Activer mode édition
+                input.disabled = false;
+                input.focus();
+                input.select();
+                button.textContent = '💾 Enregistrer';
+                button.classList.add('save-mode');
+                isEditMode = true;
+            } else {
+                // Enregistrer et verrouiller
+                input.disabled = true;
+                button.textContent = '✏️ Modifier';
+                button.classList.remove('save-mode');
+                isEditMode = false;
+                
+                // Sauvegarder automatiquement
+                config.taille = input.value;
+                sendConfigImmediate();
+                showStatus('✅ Taille enregistrée : ' + input.value + 'px', 'success');
+            }
+        }
+        
+        // ==================== TIMER TITRE ====================
+        function updateTimer() {
+            config.titre_timer = parseInt(document.getElementById('titre_timer').value) || 10;
+            sendConfigImmediate();
+        }
+        
+        // ==================== SAUVEGARDE CONFIG ====================
         async function saveConfig() {
             const ip = document.getElementById('propresenter_ip').value.trim();
             const port = document.getElementById('propresenter_port').value.trim();
             config.propresenter_api = `http://${ip}:${port}`;
             config.titre_message = document.getElementById('titre_message').value.trim();
             config.taille = document.getElementById('taille_text').value;
+            config.police = document.getElementById('police_select').value;
+            config.titre_timer = parseInt(document.getElementById('titre_timer').value) || 10;
             
             try {
                 const response = await fetch(API_URL, {
@@ -467,7 +667,6 @@
                 if (result.success) {
                     showStatus('✅ Configuration sauvegardée avec succès', 'success');
                     console.log('[SAVE] Config sauvegardée:', result.config);
-                    updateOBSUrl();
                 } else {
                     showStatus('❌ Erreur lors de la sauvegarde', 'error');
                 }
@@ -477,7 +676,6 @@
             }
         }
         
-        // Envoyer config immédiatement (pour preview)
         async function sendConfigImmediate() {
             try {
                 await fetch(API_URL, {
@@ -490,23 +688,26 @@
             }
         }
         
-        // Sélectionner couleur
+        // ==================== SÉLECTIONS ====================
         function selectColor(color) {
             document.querySelectorAll('.color-option').forEach(el => el.classList.remove('selected'));
             event.target.classList.add('selected');
             config.couleur = color;
-            sendConfigImmediate(); // Aperçu immédiat
+            sendConfigImmediate();
         }
         
-        // Sélectionner position
         function selectPosition(position) {
             document.querySelectorAll('[data-position]').forEach(el => el.classList.remove('selected'));
             event.target.classList.add('selected');
             config.position = position;
-            sendConfigImmediate(); // Aperçu immédiat
+            sendConfigImmediate();
         }
         
-        // Toggle titre
+        function selectPolice() {
+            config.police = document.getElementById('police_select').value;
+            sendConfigImmediate();
+        }
+        
         function toggleTitre() {
             config.titre_active = !config.titre_active;
             const checkbox = document.getElementById('checkboxTitre');
@@ -516,10 +717,31 @@
                 checkbox.classList.remove('checked');
             }
             config.titre_message = document.getElementById('titre_message').value.trim();
-            sendConfigImmediate(); // Aperçu immédiat
+            sendConfigImmediate();
         }
         
-        // Toggle masqué avec action immédiate
+        function toggleTimerActive() {
+            config.titre_timer_active = !config.titre_timer_active;
+            const checkbox = document.getElementById('checkboxTimer');
+            const timerGroup = document.getElementById('timerGroup');
+            
+            if (config.titre_timer_active) {
+                checkbox.classList.add('checked');
+                timerGroup.style.display = 'flex';
+            } else {
+                checkbox.classList.remove('checked');
+                timerGroup.style.display = 'none';
+            }
+            sendConfigImmediate();
+        }
+        
+        function masquerTitreManuel() {
+            config.titre_active = false;
+            document.getElementById('checkboxTitre').classList.remove('checked');
+            sendConfigImmediate();
+            showStatus('✅ Titre masqué', 'success');
+        }
+        
         function toggleHiddenImmediate() {
             config.is_hidden = !config.is_hidden;
             const checkbox = document.getElementById('checkboxHidden');
@@ -528,21 +750,9 @@
             } else {
                 checkbox.classList.remove('checked');
             }
-            // Envoi immédiat pour masquer/afficher sans sauvegarder
             sendConfigImmediate();
         }
         
-        // Copier URL OBS
-        function copyOBSUrl() {
-            const url = document.getElementById('obsUrl').textContent;
-            navigator.clipboard.writeText(url).then(() => {
-                showStatus('✅ URL copiée dans le presse-papiers !', 'success');
-            }).catch(() => {
-                showStatus('❌ Erreur lors de la copie', 'error');
-            });
-        }
-        
-        // Afficher message de statut
         function showStatus(message, type) {
             const statusEl = document.getElementById('statusMessage');
             statusEl.textContent = message;
@@ -554,13 +764,9 @@
             }, 3000);
         }
         
-        // Charger au démarrage
+        // ==================== DÉMARRAGE ====================
         window.addEventListener('DOMContentLoaded', loadConfig);
         
-        // Mise à jour URL OBS quand IP change
-        document.getElementById('propresenter_ip').addEventListener('input', updateOBSUrl);
-        
-        // Raccourci Ctrl+S pour sauvegarder
         document.addEventListener('keydown', (e) => {
             if ((e.ctrlKey || e.metaKey) && e.key === 's') {
                 e.preventDefault();

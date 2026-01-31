@@ -1,9 +1,12 @@
 {
-  "couleur": "#A5763A",
+  "couleur": "#802B36",
   "position": "bas",
   "taille": "35",
-  "titre_message": "",
+  "titre_message": "venel jean",
   "titre_active": false,
   "is_hidden": false,
-  "propresenter_api": "http://172.20.10.3:51586"
+  "propresenter_api": "http://192.168.1.22:49196",
+  "police": "Montserrat",
+  "titre_timer": 7,
+  "titre_timer_active": false
 }
