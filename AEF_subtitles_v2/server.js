@@ -202,7 +202,7 @@ server.listen(PORT, '0.0.0.0', () => {
     console.log('   Configuration: http://localhost:' + PORT + '/config.html');
     console.log('   Affichage OBS: http://localhost:' + PORT + '/display.html');
     console.log('');
-    console.log('🎮 API ProPresenter:');
+    console.log('API ProPresenter:');
     console.log('   ' + currentConfig.propresenter_api);
     console.log('');
     
